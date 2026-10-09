@@ -1,8 +1,11 @@
 <div align="center">
 
-# claude-mods
+# qol-mods
 
-**Small mods that add live UI to [Claude Code](https://claude.com/claude-code).**
+**Quality-of-life mods for [Claude Code](https://claude.com/claude-code).**
+
+Small add-ons that make Claude Code nicer to use and help newcomers get good at it faster.
+Each one fixes a small annoyance or builds a good habit.
 
 [![Claude Code plugins](https://img.shields.io/badge/Claude%20Code-plugins-D97757?style=flat-square)](#install)
 [![License: MIT](https://img.shields.io/badge/license-MIT-2ea44f?style=flat-square)](LICENSE)
@@ -18,7 +21,7 @@ What your Claude Code sessions cost, per repo, live, right above the prompt: the
 <a href="plugins/repo-spend"><img src="plugins/repo-spend/assets/preview.svg" alt="repo-spend's bar above the Claude Code prompt: my-app, about $1,284.50 to date, $12.30 today, $96.75 in the last 7 days, $4.12 this session at $6.04 an hour." width="100%"></a>
 
 ```
-/plugin install repo-spend --marketplace aseem-upadhyay/claude-mods
+/plugin install repo-spend --marketplace aseem-upadhyay/qol-mods
 ```
 
 ## Install
@@ -26,7 +29,7 @@ What your Claude Code sessions cost, per repo, live, right above the prompt: the
 Every mod installs the same way. Type this at the prompt of a Claude Code terminal session, replacing `<mod>` with the mod's name:
 
 ```
-/plugin install <mod> --marketplace aseem-upadhyay/claude-mods
+/plugin install <mod> --marketplace aseem-upadhyay/qol-mods
 ```
 
 Answer `y` to add the marketplace (only the first time), then pick the **user** scope so the mod loads in every session. Installing from a terminal also makes the mod load in the desktop app's Code tab.
@@ -34,8 +37,10 @@ Answer `y` to add the marketplace (only the first time), then pick the **user** 
 To pick up new versions:
 
 ```bash
-claude plugin marketplace update ui-mods
+claude plugin marketplace update qol-mods && claude plugin update <mod>@qol-mods
 ```
+
+Then type `/reload-plugins` in any session that was already open.
 
 ## Layout
 

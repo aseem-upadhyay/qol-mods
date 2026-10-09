@@ -1,7 +1,12 @@
 {
-  "name": "ui-mods",
-  "owner": { "name": "Aseem Upadhyay", "url": "https://github.com/aseem-upadhyay" },
-  "metadata": { "description": "Mods for Claude Code by Aseem Upadhyay" },
+  "name": "qol-mods",
+  "owner": {
+    "name": "Aseem Upadhyay",
+    "url": "https://github.com/aseem-upadhyay"
+  },
+  "metadata": {
+    "description": "Quality-of-life mods for Claude Code"
+  },
   "plugins": [
     {
       "name": "repo-spend",

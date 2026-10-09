@@ -26,7 +26,7 @@
 Type this at the prompt of a Claude Code terminal session:
 
 ```
-/plugin install repo-spend --marketplace aseem-upadhyay/claude-mods
+/plugin install repo-spend --marketplace aseem-upadhyay/qol-mods
 ```
 
 Answer `y` to add the marketplace and pick the **user** scope. The bar shows up in every session from then on, in the terminal and in the desktop app's Code tab.
@@ -34,7 +34,7 @@ Answer `y` to add the marketplace and pick the **user** scope. The bar shows up 
 Type `/repo-spend` to hide or show it. To remove it:
 
 ```bash
-claude plugin uninstall repo-spend@ui-mods
+claude plugin uninstall repo-spend@qol-mods
 ```
 
 ## Reading the bar
@@ -117,7 +117,7 @@ When Anthropic's prices change, edit `PRICES` and `PRICES_UPDATED` in `hooks/sca
 Every change ships as a new `version` in `.claude-plugin/plugin.json`. Installed copies are cached by version, and the desktop app's sessions run that cached copy. An edit under the same version never reaches them. After committing a new version:
 
 ```bash
-claude plugin marketplace update ui-mods && claude plugin update repo-spend@ui-mods
+claude plugin marketplace update qol-mods && claude plugin update repo-spend@qol-mods
 ```
 
 Then type `/reload-plugins` in each open session; new sessions pick it up on their own.

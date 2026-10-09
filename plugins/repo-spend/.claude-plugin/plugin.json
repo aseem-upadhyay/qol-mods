@@ -3,8 +3,8 @@
   "version": "0.2.0",
   "description": "A bar above the prompt: dollars spent on the current repo to date (all sessions and worktrees), and this session's live spend and burn rate",
   "author": { "name": "Aseem Upadhyay", "url": "https://github.com/aseem-upadhyay" },
-  "homepage": "https://github.com/aseem-upadhyay/claude-mods/tree/main/plugins/repo-spend",
-  "repository": "https://github.com/aseem-upadhyay/claude-mods",
+  "homepage": "https://github.com/aseem-upadhyay/qol-mods/tree/main/plugins/repo-spend",
+  "repository": "https://github.com/aseem-upadhyay/qol-mods",
   "license": "MIT",
   "keywords": ["cost", "usage", "spend", "status"],
   "types": "./types/index.d.ts"
