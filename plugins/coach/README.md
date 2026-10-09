@@ -11,8 +11,11 @@ A weekly coach built from your own sessions: one habit at a time, tips at your l
 [![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-3776AB?style=flat-square&logo=python&logoColor=white)](#requirements)
 [![License: MIT](https://img.shields.io/badge/license-MIT-2ea44f?style=flat-square)](../../LICENSE)
 
-<img src="assets/preview-cli.svg" alt="A Claude Code terminal with the coach report open: last week's sessions, prompts and spend; the habit of the week, start fresh when you switch topics, with the session it came from; two CLAUDE.md lines to copy; and a prompt typed five times that could be a skill. Above the prompt, the coach line keeps the habit in view: 2 of 3 switches this week." width="100%">
-<p><sub>The report, and the line above the prompt</sub></p>
+<img src="assets/preview-desktop.svg" alt="The coach report in the Claude desktop app. A coral card: your week with Claude, 28 Sep to 4 Oct, week 4; 10 sessions, 18 prompts, $6.14 spent, up 40% on the four weeks before, and $0.25 for a typical prompt, down 15%; beside them, spend by day. Below, the habit of the week, start fresh when you switch topics, with a ring at 33% against a goal of 70% and two of three switches done this week; then eight weeks of progress as small charts." width="100%">
+<p><sub>In the Claude desktop app</sub></p>
+
+<img src="assets/preview-cli.svg" alt="A Claude Code terminal with the coach report open: last week's sessions, prompts and spend in four framed tiles; the habit of the week, start fresh when you switch topics, 1 of 3 switches against a goal of 70%, with the session it came from; and two CLAUDE.md lines to copy. Above the prompt, the coach line keeps the habit in view: 2 of 3 switches this week." width="100%">
+<p><sub>In the terminal (<code>claude</code>), with the line above the prompt</sub></p>
 
 </div>
 
@@ -147,7 +150,7 @@ The TypeScript tests read fixtures made by the Python side, so the two agree. Af
 python3 plugins/coach/tests/make_fixtures.py
 ```
 
-`hooks/pricing.py` is a copy of `shared/pricing.py`; edit that one and run `python3 scripts/sync-shared.py`. The images in `assets/` are drawn by `scripts/coach-assets.py`. [SPEC.md](SPEC.md) has the full design.
+`hooks/pricing.py` is a copy of `shared/pricing.py`; edit that one and run `python3 scripts/sync-shared.py`. The images in `assets/` are drawn by `scripts/coach-assets.py`, from made-up figures; it needs [bun](https://bun.sh) to run the plugin's own drawing code. [SPEC.md](SPEC.md) has the full design.
 
 Every change ships as a new `version` in `.claude-plugin/plugin.json`: installed copies are cached by version.
 

@@ -32,7 +32,11 @@ How much have you burned on this repo, and how much value are you getting from y
 
 How well are you using Claude Code, and what's the one thing to get better at next? A weekly report built from your own sessions: one habit to work on, with the session it came from; CLAUDE.md lines for what Claude keeps rediscovering; prompts you keep typing that could be skills; tips at your level; and your progress over the weeks. Everything stays on your machine.
 
-<img src="plugins/coach/assets/preview-cli.svg" alt="A Claude Code terminal with the coach report open: last week's sessions, prompts and spend; the habit of the week, start fresh when you switch topics, with the session it came from; two CLAUDE.md lines to copy; and a prompt typed five times that could be a skill. Above the prompt, the coach line keeps the habit in view." width="100%">
+<img src="plugins/coach/assets/preview-desktop.svg" alt="The coach report in the Claude desktop app. A coral card: your week with Claude, 28 Sep to 4 Oct, week 4; 10 sessions, 18 prompts, $6.14 spent, up 40% on the four weeks before, and $0.25 for a typical prompt, down 15%; beside them, spend by day. Below, the habit of the week, start fresh when you switch topics, with a ring at 33% against a goal of 70% and two of three switches done this week; then eight weeks of progress as small charts." width="100%">
+<p><sub>In the Claude desktop app</sub></p>
+
+<img src="plugins/coach/assets/preview-cli.svg" alt="A Claude Code terminal with the coach report open: last week's sessions, prompts and spend in four framed tiles; the habit of the week, start fresh when you switch topics, 1 of 3 switches against a goal of 70%, with the session it came from; and two CLAUDE.md lines to copy. Above the prompt, the coach line keeps the habit in view: 2 of 3 switches this week." width="100%">
+<p><sub>In the terminal (<code>claude</code>)</sub></p>
 
 ```
 /plugin install coach --marketplace aseem-upadhyay/qol-mods
