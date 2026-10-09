@@ -19,6 +19,8 @@ declare module 'claude-code' {
       scanError: string | null
       samples: Sample[]
       isHidden: boolean
+      /** Bumped every minute so the rate and sparkline slide while idle. */
+      tick: number
     }
   }
 }
