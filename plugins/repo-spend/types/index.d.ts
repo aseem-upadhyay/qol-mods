@@ -5,6 +5,8 @@ export type History = {
   estimatedUsd: number
   today: number
   week: number
+  /** Epoch ms of the oldest message counted; null when no session has any. */
+  since: number | null
   /** Models that used tokens but have no price row: the total is a floor. */
   unpriced: string[]
 }

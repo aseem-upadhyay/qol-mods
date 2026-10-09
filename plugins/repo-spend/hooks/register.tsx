@@ -157,6 +157,28 @@ function sparkSvg(bars: number[], level: Level): string {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">${rects}</svg>`
 }
 
+const HOUR_MS = 3_600_000
+const DAY_MS = 24 * HOUR_MS
+const MONTH_MS = 30.44 * DAY_MS
+const YEAR_MS = 365.25 * DAY_MS
+
+/**
+ * How far back the total reaches, rounded UP to a whole unit: every session
+ * it counts happened inside the window it names, so the label never claims
+ * more than the logs hold ("last 3 months" for history that starts 2 months
+ * and 4 days ago). Compact spells the unit short ("last 3mo").
+ */
+function windowLabel(span: number, isCompact: boolean): string {
+  const say = (n: number, long: string, short: string) =>
+    isCompact ? `last ${n}${short}` : `last ${n} ${long}`
+  if (span <= DAY_MS) return say(24, 'hours', 'h')
+  const days = Math.ceil(span / DAY_MS)
+  if (days <= 31) return say(days, 'days', 'd')
+  const months = Math.ceil(span / MONTH_MS)
+  if (months <= 24) return say(months, 'months', 'mo')
+  return say(Math.ceil(span / YEAR_MS), 'years', 'y')
+}
+
 type View = {
   repo: string
   past: History | null
@@ -164,6 +186,8 @@ type View = {
   session: number
   rate: number | null
   level: Level
+  /** How far back the total reaches, in ms: oldest counted message to now. */
+  span: number
 }
 
 /** Every way the band can be drawn, richest first; the richest that fits is used. */
@@ -200,9 +224,16 @@ function layouts(v: View): Layout[] {
     span(money(total, isCompact), { bold: true, color: 'claude' }),
     ...(past.unpriced.length > 0 ? [span('+', { color: 'warning' })] : []),
   ]
-  const toDate = span(' to date', { dim: true })
-  const today = [dot, span(money(past.today + v.session)), span(' today', { dim: true })]
-  const week = [dot, span(money(past.week + v.session)), span(' last 7d', { dim: true })]
+  const reach = (isCompact: boolean) => span(` ${windowLabel(v.span, isCompact)}`, { dim: true })
+  // A figure that would only repeat the total is left out.
+  const today =
+    v.span <= DAY_MS
+      ? []
+      : [dot, span(money(past.today + v.session)), span(' today', { dim: true })]
+  const week =
+    v.span <= 7 * DAY_MS
+      ? []
+      : [dot, span(money(past.week + v.session)), span(' last 7d', { dim: true })]
   const unpriced =
     past.unpriced.length === 0
       ? []
@@ -210,17 +241,17 @@ function layouts(v: View): Layout[] {
 
   return [
     {
-      left: [...lead, ...amount(false), toDate, ...today, ...week, ...unpriced],
+      left: [...lead, ...amount(false), reach(false), ...today, ...week, ...unpriced],
       ...live(' this session', '  '),
       hasSpark,
     },
     {
-      left: [...lead, ...amount(false), toDate, ...today],
+      left: [...lead, ...amount(false), reach(false), ...today],
       ...live(' this session', '  '),
       hasSpark,
     },
     {
-      left: [...lead, ...amount(true), toDate, ...today],
+      left: [...lead, ...amount(true), reach(true), ...today],
       ...live(' session', '  ·  '),
       hasSpark: false,
     },
@@ -327,13 +358,16 @@ export const register: Register = on => {
     const list = await read($, samples)
     const now = await $.clock.now()
     const rate = burnRate(list, now)
+    const past = await read($, history)
+    const oldest = past?.since ?? list[0]?.at ?? now
     const view: View = {
       repo: repoName || 'repo',
-      past: await read($, history),
+      past,
       failed: await read($, scanError),
       session: list.at(-1)?.usd ?? 0,
       rate,
       level: levelOf(rate),
+      span: Math.max(0, now - oldest),
     }
     const columns = e.props.bodyColumns > 0 ? e.props.bodyColumns : 120
     const options = layouts(view)

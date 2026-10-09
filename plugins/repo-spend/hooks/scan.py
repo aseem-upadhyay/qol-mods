@@ -11,9 +11,11 @@ Every ~/.claude/projects/<slug>* folder whose slug starts with the repo's
 Per-file results are cached by (size, mtime, PRICES_UPDATED), so only changed
 files re-read, and a session keeps counting after Claude Code deletes its log.
 Prints one JSON object:
-  {"usd", "sessions", "estimatedUsd", "today", "week", "unpriced": [model, ...]}
-where "unpriced" names models that used tokens but have no row in PRICES
-(their tokens count as $0, so the total is a floor).
+  {"usd", "sessions", "estimatedUsd", "today", "week", "since", "unpriced": [model, ...]}
+where "since" is the epoch ms of the oldest message counted (null when none),
+so the total can say how far back it reaches, and "unpriced" names models that
+used tokens but have no row in PRICES (their tokens count as $0, so the total
+is a floor).
 """
 import json, os, sys, time, datetime
 
@@ -74,8 +76,14 @@ def message_cost(model, u):
     return total / 1e6, True
 
 
+def oldest(msgs):
+    """The earliest message timestamp (epoch s) among `msgs`, 0 when none has one."""
+    return min((m[1] for m in msgs.values() if m[1] > 0), default=0)
+
+
 def scan_file(path):
-    """-> {"ledger": float|None, "msgs": {msg_id: [usd, epoch_s, unpriced_model]}}
+    """-> {"ledger": float|None, "msgs": {msg_id: [usd, epoch_s, unpriced_model]},
+    "first": epoch_s of the oldest message, 0 when none}
 
     unpriced_model is "" when the message was priced (or used no tokens)."""
     ledger = None
@@ -115,10 +123,12 @@ def scan_file(path):
             cost, priced = message_cost(model, u)
             unpriced = model if not priced and tokens_in(u) > 0 else ""
             msgs[mid] = [cost, ts, unpriced]
-    return {"ledger": ledger, "msgs": msgs}
+    return {"ledger": ledger, "msgs": msgs, "first": oldest(msgs)}
 
 
-CACHE_VERSION = 4
+# A cache holds sessions whose logs Claude Code has since deleted, so a new
+# version migrates the old one (see load_cache) instead of starting over.
+CACHE_VERSION = 5
 
 
 def fold(msgs):
@@ -131,27 +141,40 @@ def fold(msgs):
     return folded
 
 
-def main():
-    projects, prefix, cache_path = sys.argv[1], sys.argv[2], sys.argv[3]
-    exclude = sys.argv[4] if len(sys.argv) > 4 else ""
+def load_cache(cache_path):
+    """The cache as the current version reads it; a v4 cache gains each
+    entry's "first" (a folded entry's is its newest message, the best left)."""
     try:
         with open(cache_path) as fh:
             cache = json.load(fh)
-        if cache.get("v") != CACHE_VERSION:
-            raise ValueError("stale cache")
     except (OSError, ValueError):
-        cache = {"v": CACHE_VERSION, "files": {}}
+        return {"v": CACHE_VERSION, "files": {}}
+    if cache.get("v") == 4:
+        for hit in cache.get("files", {}).values():
+            hit.setdefault("first", oldest(hit.get("msgs", {})))
+        cache["v"] = CACHE_VERSION
+    if cache.get("v") != CACHE_VERSION:
+        return {"v": CACHE_VERSION, "files": {}}
+    return cache
+
+
+def main():
+    projects, prefix, cache_path = sys.argv[1], sys.argv[2], sys.argv[3]
+    exclude = sys.argv[4] if len(sys.argv) > 4 else ""
+    cache = load_cache(cache_path)
     files = cache["files"]
     seen = set()
 
-    # session id -> {"ledger", "msgs"} merged across main + subagent files
+    # session id -> {"ledger", "msgs", "first"} merged across main + subagent files
     sessions = {}
 
     def merge(sid, is_main, hit):
-        s = sessions.setdefault(sid, {"ledger": None, "msgs": {}})
+        s = sessions.setdefault(sid, {"ledger": None, "msgs": {}, "first": 0})
         if is_main and hit["ledger"] is not None:
             s["ledger"] = hit["ledger"]
         s["msgs"].update(hit["msgs"])
+        if hit.get("first") and (not s["first"] or hit["first"] < s["first"]):
+            s["first"] = hit["first"]
 
     for slug in os.listdir(projects):
         # The repo's own folder and its Claude worktrees' folders.
@@ -183,7 +206,7 @@ def main():
 
     # Claude Code deletes old logs (cleanupPeriodDays, 30 days by default).
     # A session this scan has seen keeps counting after its log is gone, so
-    # the total stays a total to date rather than a rolling month.
+    # the total keeps growing instead of rolling off after a month.
     for path, hit in files.items():
         if path in seen or hit["sid"] == exclude:
             continue
@@ -202,6 +225,7 @@ def main():
         hour=0, minute=0, second=0, microsecond=0).timestamp()
     total = estimated = today = week = 0.0
     count = 0
+    since = 0
     unpriced = set()
     for s in sessions.values():
         est = sum(m[0] for m in s["msgs"].values())
@@ -209,6 +233,8 @@ def main():
                 m[2] for m in s["msgs"].values()):
             continue
         count += 1
+        if s["first"] and (not since or s["first"] < since):
+            since = s["first"]
         cost = s["ledger"] if s["ledger"] is not None else est
         total += cost
         if s["ledger"] is None:
@@ -226,6 +252,7 @@ def main():
         "usd": round(total, 4), "sessions": count,
         "estimatedUsd": round(estimated, 4),
         "today": round(today, 4), "week": round(week, 4),
+        "since": round(since * 1000) if since else None,
         "unpriced": sorted(unpriced),
     }))
 

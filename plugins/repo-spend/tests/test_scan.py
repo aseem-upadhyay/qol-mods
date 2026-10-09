@@ -111,6 +111,38 @@ class ScanTest(unittest.TestCase):
         self.assertAlmostEqual(r["estimatedUsd"], 20.0)
         self.assertEqual(r["unpriced"], ["claude-future-9"])
 
+    def test_since_is_the_oldest_counted_message(self):
+        self.write(SLUG, "a.jsonl", [
+            assistant("m1", "claude-opus-5-5", ts="2026-03-01T10:00:00Z", output_tokens=1),
+            assistant("m2", "claude-opus-5-5", ts="2026-05-01T10:00:00Z", output_tokens=1),
+        ])
+        self.write(SLUG, "b.jsonl", [
+            assistant("m3", "claude-opus-5-5", ts="2026-04-01T10:00:00Z", output_tokens=1)])
+        march_1 = 1772359200000  # 2026-03-01T10:00:00Z in epoch ms
+        self.assertEqual(self.scan()["since"], march_1)
+
+        # It still reaches back that far after Claude Code deletes the log.
+        os.remove(os.path.join(self.projects, SLUG, "a.jsonl"))
+        self.assertEqual(self.scan()["since"], march_1)
+
+    def test_since_is_null_without_history(self):
+        os.makedirs(os.path.join(self.projects, SLUG))
+        self.assertIsNone(self.scan()["since"])
+
+    def test_previous_cache_format_keeps_remembered_sessions(self):
+        # A v4 cache, before entries carried "first": one session whose log
+        # Claude Code already deleted. It must survive the upgrade.
+        gone = os.path.join(self.projects, SLUG, "gone.jsonl")
+        os.makedirs(os.path.dirname(self.cache), exist_ok=True)
+        with open(self.cache, "w") as fh:
+            json.dump({"v": 4, "files": {gone: {
+                "k": "1:1:x", "sid": "gone", "main": True, "ledger": None, "gone": True,
+                "msgs": {"#total": [12.5, 1772359200.0, ""]}}}}, fh)
+        os.makedirs(os.path.join(self.projects, SLUG), exist_ok=True)
+        r = self.scan()
+        self.assertAlmostEqual(r["usd"], 12.5)
+        self.assertEqual(r["since"], 1772359200000)
+
     def test_cache_reuse_gives_same_answer(self):
         self.write(SLUG, "a.jsonl", [
             assistant("m1", "claude-opus-5-5", output_tokens=1_000_000)])

@@ -11,7 +11,7 @@ What your Claude Code sessions cost, per repo, live, right above the prompt.
 [![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-3776AB?style=flat-square&logo=python&logoColor=white)](#requirements)
 [![License: MIT](https://img.shields.io/badge/license-MIT-2ea44f?style=flat-square)](../../LICENSE)
 
-<img src="assets/preview.svg" alt="A Claude Code terminal. Above the prompt, a one-line bar reads: my-app, about $1,284.50 to date, $12.30 today, $96.75 in the last 7 days; on the right, $4.12 this session, a green sparkline, and $6.04 an hour." width="100%">
+<img src="assets/preview.svg" alt="A Claude Code terminal. Above the prompt, a one-line bar reads: my-app, about $1,284.50 in the last 3 months, $12.30 today, $96.75 in the last 7 days; on the right, $4.12 this session, a green sparkline, and $6.04 an hour." width="100%">
 
 </div>
 
@@ -47,7 +47,7 @@ claude plugin uninstall repo-spend@qol-mods
 | Part | What it shows |
 | --- | --- |
 | **◆ repo** | The repo the session runs in. A worktree session counts toward its main checkout |
-| **to date** | Every session in the repo so far, plus this one, including sessions whose logs Claude Code has since deleted (see [history](#how-far-back-it-goes)). **≈** means some of it is estimated (see [accuracy](#accuracy)) |
+| **last 3 months** | Every session in the repo that repo-spend knows about, plus this one. The label is how far back that reaches, from the oldest session counted, rounded up (see [how far back it goes](#how-far-back-it-goes)). **≈** means some of it is estimated (see [accuracy](#accuracy)) |
 | **today · last 7d** | The same total, for today (local time) and for the last 7 days |
 | **this session** | The live session's cost, the same figure `/cost` shows, subagents included |
 | **sparkline** | This session's spend in ten 3-minute slices covering the last 30 minutes. A full bar is at least $0.75, so small spends stay small. Drawn as SVG bars on desktop and block characters in the terminal |
@@ -87,6 +87,8 @@ A model missing from the price table counts as $0. The bar flags it in amber (`+
 Sessions on a subscription show what the same usage would cost at API list prices, not what you paid. That's the point: it's the value you got from your plan.
 
 ### How far back it goes
+
+The bar never says "to date". It labels the total with the window it actually covers: the age of the oldest session it counted, rounded **up** to whole days, months or years. So "last 3 months" means every session in the total happened within the last three months. History that starts 2 months and 4 days ago reads "last 3 months", because "last 2 months" would include sessions from before that window.
 
 Claude Code deletes its session logs after 30 days by default (the `cleanupPeriodDays` setting). repo-spend remembers what every session cost once it has seen it, so from the day you install it the total keeps growing instead of rolling off after a month.
 

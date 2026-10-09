@@ -6,14 +6,17 @@ import type { History } from '../types'
 
 const SURFACES = ['terminal', 'desktop'] as const
 const HOUR = 60 * 60 * 1000
-const START = 1_000_000
+const DAY = 24 * HOUR
+const START = Date.UTC(2026, 9, 9, 12)
 
+/** Ten earlier sessions, the oldest 58 days back: "last 2 months". */
 const HISTORY: History = {
   usd: 1000,
   sessions: 10,
   estimatedUsd: 800,
   today: 4,
   week: 50,
+  since: START - 58 * DAY,
   unpriced: [],
 }
 
@@ -102,6 +105,8 @@ for (const surface of SURFACES) {
 
       expect(await ui.find({ text: 'my.app' })).toBeDefined()
       expect(await ui.find({ text: '$1,003.00' })).toBeDefined()
+      expect(await ui.find({ text: 'last 2 months' })).toBeDefined()
+      expect(await ui.find({ text: 'to date' })).toBeUndefined()
       expect(await ui.find({ text: '≈' })).toBeDefined()
       expect(await ui.find({ text: '$7.00' })).toBeDefined()
       expect(await ui.find({ text: '$53.00' })).toBeDefined()
@@ -127,6 +132,7 @@ for (const surface of SURFACES) {
 
       const compact = await mount(80)
       expect(await compact.find({ text: '$1.00k' })).toBeDefined()
+      expect(await compact.find({ text: 'last 2mo' })).toBeDefined()
       expect(await compact.find({ text: 'my.app' })).toBeDefined()
       expect(await compact.find({ type: 'Svg' })).toBeUndefined()
       expect(await compact.find({ text: '█' })).toBeUndefined()
@@ -149,6 +155,44 @@ for (const surface of SURFACES) {
         expect(await ui.find({ text: '▂' })).toBeDefined()
         expect(await ui.find({ text: '█' })).toBeUndefined()
       }
+    })
+
+    // The window is rounded UP, so every counted session falls inside it.
+    const windows = [
+      { name: '64.5 days', back: 64.5 * DAY, label: 'last 3 months', today: true, week: true },
+      { name: '400 days', back: 400 * DAY, label: 'last 14 months', today: true, week: true },
+      { name: '10 days', back: 10 * DAY, label: 'last 10 days', today: true, week: true },
+      { name: '3 days', back: 3 * DAY, label: 'last 3 days', today: true, week: false },
+      { name: '2 hours', back: 2 * HOUR, label: 'last 24 hours', today: false, week: false },
+    ]
+    for (const w of windows) {
+      test(`history reaching back ${w.name} reads "${w.label}"`, async ($, on) => {
+        const { mount } = await boot($, on, surface, {
+          scan: { ...HISTORY, since: START - w.back },
+        })
+        const ui = await mount(160)
+        expect(await ui.find({ text: w.label })).toBeDefined()
+        // A figure that would only repeat the total is left out.
+        expect((await ui.find({ text: 'today' })) !== undefined).toBe(w.today)
+        expect((await ui.find({ text: 'last 7d' })) !== undefined).toBe(w.week)
+      })
+    }
+
+    test('with no earlier sessions, the window is this session', async ($, on) => {
+      const scan = {
+        ...HISTORY,
+        usd: 0,
+        sessions: 0,
+        estimatedUsd: 0,
+        today: 0,
+        week: 0,
+        since: null,
+      }
+      const { spend, mount } = await boot($, on, surface, { scan })
+      await spend(0.5, 10 * 60 * 1000)
+      const ui = await mount(160)
+      expect(await ui.find({ text: 'last 24 hours' })).toBeDefined()
+      expect(await ui.find({ text: 'today' })).toBeUndefined()
     })
 
     test('flags models it has no price for', async ($, on) => {

@@ -98,7 +98,7 @@ BARS = [0, 0, 0.42, 0, 0.18, 1.1, 0, 0.3, 0, 0.75]
 def left_full():
     return [
         ("◆", CLAUDE), (" ",), ("my-app", TEXT, True), ("  ",),
-        ("≈", DIM), ("$1,284.50", CLAUDE, True), (" to date", DIM),
+        ("≈", DIM), ("$1,284.50", CLAUDE, True), (" last 3 months", DIM),
         ("  ·  ", DIM), ("$12.30",), (" today", DIM),
         ("  ·  ", DIM), ("$96.75",), (" last 7d", DIM),
     ]
@@ -111,7 +111,7 @@ def left_medium():
 def left_compact():
     return [
         ("◆", CLAUDE), (" ",), ("my-app", TEXT, True), ("  ",),
-        ("≈", DIM), ("$1.28k", CLAUDE, True), (" to date", DIM),
+        ("≈", DIM), ("$1.28k", CLAUDE, True), (" last 3mo", DIM),
         ("  ·  ", DIM), ("$12.30",), (" today", DIM),
     ]
 
@@ -188,7 +188,7 @@ def preview():
         f'<text x="{w / 2:.0f}" y="21" text-anchor="middle" fill="{DIM}" font-size="12">claude · ~/code/my-app</text>'
         f'<rect x="0.5" y="0.5" width="{w - 1}" height="{h - 1}" rx="12" fill="none" stroke="{EDGE}"/>'
     )
-    title = "repo-spend: a bar above the Claude Code prompt showing $1,284.50 spent on my-app to date, $12.30 today, $96.75 in the last 7 days, and $4.12 this session burning $6.04 an hour"
+    title = "repo-spend: a bar above the Claude Code prompt showing $1,284.50 spent on my-app in the last 3 months, $12.30 today, $96.75 in the last 7 days, and $4.12 this session burning $6.04 an hour"
     return svg(w, h, chrome + "".join(rows), title)
 
 
@@ -209,7 +209,7 @@ def layouts():
         y = top + 34 + gap - 10
 
     strip("Wide: totals, today, last 7 days, and the burn sparkline", 116, left_full(), right_spark())
-    strip("Narrower: the 7-day figure goes first", 92, left_medium(), right_spark())
+    strip("Narrower: the 7-day figure goes first", 96, left_medium(), right_spark())
     strip("Compact: short totals, no sparkline", 72, left_compact(), right_compact())
     strip("Tiny: just the numbers", 40, [("◆", CLAUDE), (" ",), ("≈", DIM), ("$1.28k", CLAUDE, True)],
           [("$4.12", TEXT, True), (" · ", DIM), ("$6.04/hr", LEVEL["calm"], True)])
