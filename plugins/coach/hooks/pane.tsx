@@ -4,23 +4,18 @@
  * progress, features, tips and notices; plus the detail, glossary and
  * see-all pages. Nothing here writes a file; the one request it prepares,
  * "Make it a skill", and the week question wait in the prompt box.
+ *
+ * Where the surface draws Svg (the desktop app, VS Code, mobile) the report is
+ * set as cards: art.ts draws the week's hero, the habit ring, the progress
+ * lines and the toolkit, and Markdown sets the headings. The terminal draws
+ * the same report in text, with glyph sparklines.
  */
 import type { Color, ElementTable, RenderElement, RenderSurface, UiPressArgument } from 'claude-code'
 
-import type {
-  Choices,
-  ClaudeMdCard,
-  Evidence,
-  HabitId,
-  Report,
-  ScanState,
-  SkillCard,
-  Tip,
-  View,
-  WeekRow,
-  WeekSummary,
-} from '../types'
+import type { Choices, ClaudeMdCard, Evidence, HabitId, Report, ScanState, SkillCard, Tip, View, WeekRow } from '../types'
+import * as A from './art'
 import * as C from './copy'
+import * as F from './figures'
 import * as Sel from './select'
 
 export const PANE = 'coach-report'
@@ -49,20 +44,8 @@ export type PaneActions = {
 const DAY = 24 * 60 * 60 * 1000
 const GLYPHS = '▁▂▃▄▅▆▇█'
 
-type Better = 'up' | 'down' | null
-type Series = { label: string; values: (number | null)[]; better: Better; format: (n: number) => string }
-
-function mean(values: number[]): number | null {
-  return values.length ? values.reduce((a, b) => a + b, 0) / values.length : null
-}
-
-function trend(values: (number | null)[]): number | null {
-  const known = values.filter((v): v is number => v !== null)
-  if (known.length < 2) return null
-  const first = known[0] ?? 0
-  const last = known[known.length - 1] ?? 0
-  return last - first
-}
+/** A tone in the person's theme, for Text. */
+const TONE_COLOR: Record<A.Tone, Color | undefined> = { good: 'success', bad: 'warning', flat: undefined, claude: 'claude' }
 
 function glyphs(values: (number | null)[]): string {
   const known = values.filter((v): v is number => v !== null)
@@ -78,49 +61,15 @@ function glyphs(values: (number | null)[]): string {
     .join('')
 }
 
-function sparkSvg(values: (number | null)[], color: string): string {
-  const width = 120
-  const height = 22
-  const known = values.filter((v): v is number => v !== null)
-  const lo = known.length ? Math.min(...known) : 0
-  const hi = known.length ? Math.max(...known) : 1
-  const step = values.length > 1 ? width / (values.length - 1) : width
-  const segments: string[] = []
-  let points: string[] = []
-  values.forEach((v, i) => {
-    if (v === null) {
-      if (points.length) segments.push(points.join(' '))
-      points = []
-      return
-    }
-    const y = hi === lo ? height / 2 : height - 2 - ((v - lo) / (hi - lo)) * (height - 4)
-    points.push(`${(i * step).toFixed(1)},${y.toFixed(1)}`)
-  })
-  if (points.length) segments.push(points.join(' '))
-  const lines = segments
-    .map(p =>
-      p.includes(' ')
-        ? `<polyline points="${p}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`
-        : `<circle cx="${p.split(',')[0]}" cy="${p.split(',')[1]}" r="2" fill="${color}"/>`,
-    )
-    .join('')
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">${lines}</svg>`
+/** "███░░░░" for a share of `cells`. */
+function meter(share: number, cells: number): [string, string] {
+  const full = Math.round(Math.max(0, Math.min(1, share)) * cells)
+  return ['█'.repeat(full), '░'.repeat(cells - full)]
 }
 
-/** Weeks whose definitions changed, or that were partial, break the line. */
-function seriesOf(history: WeekSummary[], pick: (w: WeekSummary) => number | null): (number | null)[] {
-  const out: (number | null)[] = []
-  let version: number | null = null
-  for (const week of history) {
-    if (version !== null && week.metricsVersion !== version) out.push(null)
-    version = week.metricsVersion
-    out.push(week.partial ? null : pick(week))
-  }
-  return out
-}
-
-function weeksBetween(a: string, b: string): number {
-  return Math.round((Date.parse(`${b}T12:00:00`) - Date.parse(`${a}T12:00:00`)) / (7 * DAY))
+/** The characters Markdown would read as markup inside a heading, escaped. */
+function mdEscape(text: string): string {
+  return text.replace(/([\\`*_[\]<>~|#])/g, '\\$1')
 }
 
 export function drawPane(
@@ -132,22 +81,54 @@ export function drawPane(
 ): RenderElement {
   const { Box, Text, Button } = els
   const Code = 'Code' in els ? els.Code : null
+  const Markdown = 'Markdown' in els ? els.Markdown : null
+  const Svg = surface !== 'terminal' && 'Svg' in els ? els.Svg : null
+  const rich = Svg !== null
   const columns = bodyColumns > 0 ? bodyColumns : 80
   const narrow = columns < 60
+  /** Too tight for four framed tiles in a row. */
+  const tight = columns < 76
+  const width = A.pixels(columns - 2)
   const { report, view, choices, now } = ctx
+  const { setView, copy, flag, dismiss } = actions
 
-  const setView = actions.setView
+  // -- pieces every page uses
+
   const block = (source: string, language: string, path?: string) =>
-    Code ? (
-      <Code source={source} language={language} {...(path ? { path } : {})} />
-    ) : (
-      <Text>{source}</Text>
+    Code ? <Code source={source} language={language} {...(path ? { path } : {})} /> : <Text>{source}</Text>
+  const picture = (source: string, alt: string) => (Svg ? <Svg source={source} alt={alt} /> : null)
+  const heading = (title: string, level: 2 | 3 = 3): RenderElement => {
+    if (rich && Markdown) return <Markdown text={`${'#'.repeat(level)} ${mdEscape(title)}`} />
+    if (level === 2) return <Text bold>{title}</Text>
+    return (
+      <Box flexDirection="row">
+        <Text color="claude">{'◆ '}</Text>
+        <Text bold color="claude">
+          {title}
+        </Text>
+      </Box>
     )
-  const section = (title: string, ...children: (RenderElement | null | false)[]) => (
+  }
+  /** A framed card: every card where the surface draws Svg, only an accented one on the terminal. */
+  const card = (accent: Color | null, ...children: (RenderElement | null | false)[]) =>
+    rich ? (
+      <Box flexDirection="column" borderStyle="round" borderColor={accent ?? 'subtle'} paddingX={2} paddingY={1} marginTop={1}>
+        {children}
+      </Box>
+    ) : accent ? (
+      <Box flexDirection="column" borderStyle="round" borderColor={accent} paddingX={1} marginTop={1}>
+        {children}
+      </Box>
+    ) : (
+      <Box flexDirection="column" marginTop={1}>
+        {children}
+      </Box>
+    )
+  const section = (title: string, ...children: (RenderElement | null | false)[]) => card(null, heading(title), ...children)
+  /** A heading and what follows, never framed: for pictures that carry their own cards. */
+  const open = (title: string, ...children: (RenderElement | null | false)[]) => (
     <Box flexDirection="column" marginTop={1}>
-      <Text bold color="claude">
-        {title}
-      </Text>
+      {heading(title)}
       {children}
     </Box>
   )
@@ -156,49 +137,36 @@ export function drawPane(
       {items}
     </Box>
   )
+  const page = (...children: (RenderElement | null | false)[]) => (
+    <Box flexDirection="column" paddingX={1}>
+      {children}
+    </Box>
+  )
   const back = () => (
     <Button key="back" label="Back to the report" hotkey="b" onPress={() => setView({ page: 'report', detail: null })} />
   )
-  const copy = actions.copy
-  const flag = actions.flag
-  const dismiss = actions.dismiss
-  const spark = (values: (number | null)[], color: Color, hex: string) => {
-    if (surface !== 'terminal' && 'Svg' in els) {
-      const { Svg } = els
-      return <Svg source={sparkSvg(values, hex)} alt="Weekly trend" height={22} />
-    }
-    return <Text color={color}>{glyphs(values)}</Text>
-  }
 
   // -- before there's a report
   if (!report) {
     const s = ctx.scan
     if (s.status === 'failed') {
-      return (
-        <Box flexDirection="column" paddingX={1}>
-          <Text bold>Coach</Text>
-          <Text>{s.error === 'python3 not found' ? C.COMMAND.python : `Couldn't read your sessions: ${s.error ?? 'unknown error'}.`}</Text>
-          {buttons(<Button key="rescan" label="Rescan" onPress={() => actions.rescan()} />)}
-        </Box>
+      return page(
+        heading('Coach', 2),
+        <Text>{s.error === 'python3 not found' ? C.COMMAND.python : `Couldn't read your sessions: ${s.error ?? 'unknown error'}.`}</Text>,
+        buttons(<Button key="rescan" label="Rescan" onPress={() => actions.rescan()} />),
       )
     }
     const p = s.progress
-    return (
-      <Box flexDirection="column" paddingX={1}>
-        <Text bold>Coach</Text>
-        <Text>{p ? `Reading your sessions… ${p[0]} of ${p[1]} files` : 'Reading your sessions…'}</Text>
-      </Box>
+    return page(
+      heading('Coach', 2),
+      <Text>{p ? `Reading your sessions… ${p[0]} of ${p[1]} files` : 'Reading your sessions…'}</Text>,
+      p && rich ? <Box marginTop={1}>{picture(A.meterSvg(p[0], p[1], Math.min(width, 360)), C.ART.scanAlt(p[0], p[1]))}</Box> : null,
     )
   }
 
   const row = Sel.shownRow(report, view.week)
   if (!row || (report.coverage.logsSince !== null && now - report.coverage.logsSince < 3 * DAY && row.volume.prompts === 0)) {
-    return (
-      <Box flexDirection="column" paddingX={1}>
-        <Text bold>Coach</Text>
-        <Text>Come back in a few days. coach needs a little history first.</Text>
-      </Box>
-    )
+    return page(heading('Coach', 2), <Text>Come back in a few days. coach needs a little history first.</Text>)
   }
   const evidence: Record<string, Evidence> = { ...report.evidence, ...row.evidence }
 
@@ -206,12 +174,13 @@ export function drawPane(
   if (view.detail) {
     if (view.detail.startsWith('glossary:')) {
       const term = view.detail.slice('glossary:'.length)
-      return (
-        <Box flexDirection="column" paddingX={1}>
-          <Text bold>{`What is ${term}?`}</Text>
-          <Text>{C.GLOSSARY[term] ?? ''}</Text>
-          {buttons(<Button key="back" label="Back" hotkey="b" onPress={() => setView({ detail: null })} />)}
-        </Box>
+      return page(
+        card(
+          null,
+          heading(`What is ${term}?`),
+          <Text>{C.GLOSSARY[term] ?? ''}</Text>,
+          buttons(<Button key="back" label="Back" hotkey="b" onPress={() => setView({ detail: null })} />),
+        ),
       )
     }
     const ev = evidence[view.detail]
@@ -220,18 +189,30 @@ export function drawPane(
       const facts = Object.entries(ev.numbers)
         .map(([k, v]) => `${k}: ${v}`)
         .join(' · ')
-      return (
-        <Box flexDirection="column" paddingX={1}>
-          <Text bold>{ev.title}</Text>
-          <Text dimColor>{`${C.dayName(ev.at)} ${C.shortDate(ev.at)} · ${ev.project}${ev.usd ? ` · about ${C.money(ev.usd)}` : ''}`}</Text>
-          {ev.excerpt ? <Text>{`"${ev.excerpt}"`}</Text> : null}
-          {facts ? <Text dimColor>{facts}</Text> : null}
-          <Text dimColor>{`To open it again: ${resume}`}</Text>
-          {buttons(
+      return page(
+        card(
+          null,
+          heading(ev.title),
+          <Text dimColor>{`${C.dayName(ev.at)} ${C.shortDate(ev.at)} · ${ev.project}${ev.usd ? ` · about ${C.money(ev.usd)}` : ''}`}</Text>,
+          ev.excerpt ? (
+            <Box marginTop={1}>
+              <Text italic={rich}>{`"${ev.excerpt}"`}</Text>
+            </Box>
+          ) : null,
+          facts ? <Text dimColor>{facts}</Text> : null,
+          rich && Code ? (
+            <Box flexDirection="column" marginTop={1}>
+              <Text dimColor>To open it again:</Text>
+              {block(resume, 'bash')}
+            </Box>
+          ) : (
+            <Text dimColor>{`To open it again: ${resume}`}</Text>
+          ),
+          buttons(
             <Button key="copy-resume" label="Copy resume command" onPress={press => copy(resume, press)} />,
             <Button key="back" label="Back" hotkey="b" onPress={() => setView({ detail: null })} />,
-          )}
-        </Box>
+          ),
+        ),
       )
     }
   }
@@ -242,33 +223,27 @@ export function drawPane(
   // -- the see-all pages
   if (view.page === 'tips') {
     const tips = Sel.allTips(report, row, choices, habit, now)
-    return (
-      <Box flexDirection="column" paddingX={1}>
-        <Text bold>Tips for you</Text>
-        {tips.length ? tips.map(t => tipBlock(t)) : <Text>No tips right now. You're doing the things they'd suggest.</Text>}
-        {buttons(back())}
-      </Box>
+    return page(
+      heading('Tips for you', 2),
+      ...(tips.length ? tips.map(t => tipBlock(t)) : [<Text>No tips right now. You're doing the things they'd suggest.</Text>]),
+      buttons(back()),
     )
   }
   if (view.page === 'claude-md') {
     const cards = Sel.claudeMdCards(report, choices, now)
-    return (
-      <Box flexDirection="column" paddingX={1}>
-        <Text bold>CLAUDE.md suggestions</Text>
-        <Text dimColor>Suggestions only: coach never changes your CLAUDE.md. Copy what helps and add it yourself.</Text>
-        {cards.length ? cards.map(card => claudeMdBlock(card, true)) : <Text>Nothing to suggest right now.</Text>}
-        {buttons(back())}
-      </Box>
+    return page(
+      heading('CLAUDE.md suggestions', 2),
+      <Text dimColor>Suggestions only: coach never changes your CLAUDE.md. Copy what helps and add it yourself.</Text>,
+      ...(cards.length ? cards.map(c => claudeMdBlock(c, true)) : [<Text>Nothing to suggest right now.</Text>]),
+      buttons(back()),
     )
   }
   if (view.page === 'skills') {
     const cards = Sel.skillCards(report, choices, now)
-    return (
-      <Box flexDirection="column" paddingX={1}>
-        <Text bold>Skills worth making</Text>
-        {cards.length ? cards.map(card => skillBlock(card)) : <Text>No repeated prompts right now.</Text>}
-        {buttons(back())}
-      </Box>
+    return page(
+      heading('Skills worth making', 2),
+      ...(cards.length ? cards.map(c => skillBlock(c)) : [<Text>No repeated prompts right now.</Text>]),
+      buttons(back()),
     )
   }
 
@@ -278,86 +253,83 @@ export function drawPane(
   const older = row.week === 'recent' ? report.previous : at > 0 ? all[at - 1] : null
   const newer = row.week === 'recent' ? report.current : at >= 0 && at < all.length - 1 ? all[at + 1] : null
   const isCurrent = report.current !== null && row.week === report.current.week
-  const title = Sel.isEarlyRead(row) ? 'Your last 7 days with Claude' : isCurrent ? 'Your week so far' : 'Your week with Claude'
-  const range = Sel.isEarlyRead(row) ? `${C.shortDate(row.start)} to ${C.shortDate(row.end - 1)}` : C.weekRange(row.week)
-  const weekNo =
-    choices.firstReportWeek && !Sel.isEarlyRead(row) && row.week >= choices.firstReportWeek
-      ? weeksBetween(choices.firstReportWeek, row.week) + 1
-      : null
-  const notes = [
-    Sel.isEarlyRead(row) ? 'early read' : null,
-    row.coverage.partial ? 'partial week: your logs start partway through it' : null,
-  ].filter(Boolean)
+  const head = F.header(row, choices.firstReportWeek, isCurrent)
+  const when = [head.range, head.weekNo ? `week ${head.weekNo}` : null].filter(Boolean).join(' · ')
 
-  const header = (
-    <Box flexDirection="column">
-      <Box flexDirection="row" justifyContent="space-between" flexWrap="wrap">
-        <Text bold>{title}</Text>
-        <Text dimColor>{[range, weekNo ? `week ${weekNo}` : null].filter(Boolean).join(' · ')}</Text>
-      </Box>
-      {notes.length ? <Text dimColor>{notes.join(' · ')}</Text> : null}
-      {buttons(
-        older ? <Button key="prev" label="Previous week" hotkey="p" onPress={() => setView({ week: older.week, detail: null })} /> : null,
-        newer ? <Button key="next" label="Next week" hotkey="n" onPress={() => setView({ week: newer.week, detail: null })} /> : null,
-        report.current && !isCurrent ? (
-          <Button key="this-week" label="This week so far" hotkey="w" onPress={() => setView({ week: report.current?.week ?? null, detail: null })} />
-        ) : null,
-        <Button
-          key="ask"
-          label="Ask Claude about this week"
-          hotkey="a"
-          onPress={() => actions.fill(C.weekQuestion(row), 'Your question is in the prompt box. Edit it or send it as it is.')}
-        />,
-      )}
-    </Box>
+  const nav = buttons(
+    older ? (
+      <Button key="prev" label={rich ? '← Previous week' : 'Previous week'} hotkey="p" onPress={() => setView({ week: older.week, detail: null })} />
+    ) : null,
+    newer ? (
+      <Button key="next" label={rich ? 'Next week →' : 'Next week'} hotkey="n" onPress={() => setView({ week: newer.week, detail: null })} />
+    ) : null,
+    report.current && !isCurrent ? (
+      <Button key="this-week" label="This week so far" hotkey="w" onPress={() => setView({ week: report.current?.week ?? null, detail: null })} />
+    ) : null,
+    <Button
+      key="ask"
+      label="Ask Claude about this week"
+      hotkey="a"
+      {...(rich ? { variant: 'primary' as const } : {})}
+      onPress={() => actions.fill(C.weekQuestion(row), 'Your question is in the prompt box. Edit it or send it as it is.')}
+    />,
   )
 
-  // headline
-  const before = report.history.filter(w => w.start < row.start && !w.partial).slice(-4)
-  const avg = (pick: (w: WeekSummary) => number) => mean(before.map(pick))
-  const tiles: { label: string; value: string; now: number; avg: number | null; better: Better }[] = [
-    { label: 'Sessions', value: String(row.volume.sessions), now: row.volume.sessions, avg: avg(w => w.sessions), better: null },
-    { label: 'Prompts', value: String(row.volume.prompts), now: row.volume.prompts, avg: avg(w => w.prompts), better: null },
-    { label: 'Spent', value: C.money(row.cost.usd), now: row.cost.usd, avg: avg(w => w.usd), better: 'down' },
-    {
-      label: 'Typical cost per prompt',
-      value: C.money(row.cost.perPrompt.median),
-      now: row.cost.perPrompt.median,
-      avg: avg(w => w.costPerPrompt),
-      better: 'down',
-    },
-  ]
-  const change = (t: (typeof tiles)[number]) => {
-    if (t.avg === null || t.avg <= 0) return null
-    const pct = (t.now - t.avg) / t.avg
-    const text = `${pct >= 0 ? '+' : '−'}${Math.round(Math.abs(pct) * 100)}%`
-    if (Math.abs(pct) < 0.1 || t.better === null) return <Text dimColor>{text}</Text>
-    const good = (t.better === 'down' && pct < 0) || (t.better === 'up' && pct > 0)
-    return <Text color={good ? 'success' : 'warning'}>{text}</Text>
-  }
-  const headline = narrow ? (
-    <Box flexDirection="column" marginTop={1}>
-      {tiles.map(t => (
-        <Box flexDirection="row" columnGap={1}>
-          <Text dimColor>{`${t.label}:`}</Text>
-          <Text bold>{t.value}</Text>
-          {change(t)}
-        </Box>
-      ))}
-    </Box>
-  ) : (
-    <Box flexDirection="row" marginTop={1} columnGap={2}>
-      {tiles.map(t => (
-        <Box flexDirection="column" width={Math.max(14, Math.floor((columns - 8) / 4))}>
-          <Text dimColor>{t.label}</Text>
+  // header and headline: one card where Svg draws, lines and tiles on the terminal
+  let top: RenderElement
+  if (rich) {
+    const hero = F.heroOf(report, row, head)
+    top = (
+      <Box flexDirection="column">
+        {picture(A.heroSvg(hero, width).source, C.ART.heroAlt(head.title, when, hero.stats))}
+        {nav}
+      </Box>
+    )
+  } else {
+    const tiles = F.tiles(report, row)
+    const change = (t: F.Tile) => {
+      const c = F.change(t)
+      if (!c) return null
+      const color = TONE_COLOR[c.tone]
+      return color ? <Text color={color}>{C.ART.change(c.pct)}</Text> : <Text dimColor>{C.ART.change(c.pct)}</Text>
+    }
+    const headline = tight ? (
+      <Box flexDirection="column" marginTop={1}>
+        {tiles.map(t => (
           <Box flexDirection="row" columnGap={1}>
+            <Text dimColor>{`${t.label}:`}</Text>
             <Text bold>{t.value}</Text>
             {change(t)}
           </Box>
+        ))}
+      </Box>
+    ) : (
+      <Box flexDirection="row" marginTop={1} columnGap={1}>
+        {tiles.map(t => (
+          <Box flexDirection="column" borderStyle="round" borderDimColor paddingX={1} width={Math.floor((columns - 5) / 4)}>
+            <Text dimColor wrap="truncate-end">
+              {t.label}
+            </Text>
+            <Box flexDirection="row" columnGap={1}>
+              <Text bold>{t.value}</Text>
+              {change(t)}
+            </Box>
+          </Box>
+        ))}
+      </Box>
+    )
+    top = (
+      <Box flexDirection="column">
+        <Box flexDirection="row" justifyContent="space-between" flexWrap="wrap">
+          <Text bold>{head.title}</Text>
+          <Text dimColor>{when}</Text>
         </Box>
-      ))}
-    </Box>
-  )
+        {head.notes.length ? <Text dimColor>{head.notes.join(' · ')}</Text> : null}
+        {nav}
+        {headline}
+      </Box>
+    )
+  }
 
   // habit of the week
   let habitBlock: RenderElement
@@ -367,15 +339,69 @@ export function drawPane(
     const ev = evId ? evidence[evId] : undefined
     const live = report.current?.habits[habit]
     const words = C.HABIT[habit]
-    habitBlock = section(
-      'Habit of the week',
-      choice.learned ? <Text color="success">{C.learned(choice.learned)}</Text> : null,
-      <Text bold>{words.title}</Text>,
-      ev ? <Text>{C.habitEvidence(habit, ev)}</Text> : null,
-      <Text>{`Try this: ${words.tryThis}`}</Text>,
+    const met = !!status && status.value !== null && status.value >= status.target
+    const score = status && status.total > 0 ? C.ART.score(status.done, status.total, words.unit, status.target) : null
+    const liveLine =
       live && live.total > 0 ? (
-        <Text dimColor>{`This week so far: ${live.done} of ${live.total} ${words.unit}.`}</Text>
+        <Box flexDirection="row" columnGap={1} alignItems="center" marginTop={1}>
+          {rich ? (
+            picture(A.dotsSvg(live.done, live.total), C.ART.dotsAlt(live.done, live.total, words.unit))
+          ) : (
+            <Text>
+              <Text color="claude">{'●'.repeat(Math.round((Math.min(live.done, live.total) / live.total) * Math.min(live.total, 8)))}</Text>
+              <Text dimColor>
+                {'○'.repeat(Math.min(live.total, 8) - Math.round((Math.min(live.done, live.total) / live.total) * Math.min(live.total, 8)))}
+              </Text>
+            </Text>
+          )}
+          <Text dimColor>{`This week so far: ${live.done} of ${live.total} ${words.unit}.`}</Text>
+        </Box>
+      ) : null
+    let gauge: RenderElement | null = null
+    if (status && score) {
+      if (rich) {
+        gauge = picture(
+          A.ringSvg(status.value, status.target, status.value === null ? '—' : C.percent(status.value), C.ART.goal(status.target), met),
+          C.ART.ringAlt(status.value, status.target, words.unit),
+        )
+      } else {
+        const [full, empty] = meter(status.value ?? 0, 10)
+        gauge = (
+          <Text>
+            <Text color={met ? 'success' : 'claude'}>{full}</Text>
+            <Text dimColor>{empty}</Text>
+          </Text>
+        )
+      }
+    }
+    habitBlock = card(
+      'claude',
+      heading('Habit of the week'),
+      choice.learned ? <Text color="success">{C.learned(choice.learned)}</Text> : null,
+      rich ? (
+        <Box flexDirection="row" columnGap={2} alignItems="center" marginTop={1}>
+          {gauge}
+          <Box flexDirection="column" flexShrink={1}>
+            <Text bold>{words.title}</Text>
+            {score ? <Text dimColor>{score}</Text> : null}
+          </Box>
+        </Box>
+      ) : (
+        <Box flexDirection="row" columnGap={2} flexWrap="wrap">
+          <Text bold>{words.title}</Text>
+          {gauge}
+          {score ? <Text dimColor>{score}</Text> : null}
+        </Box>
+      ),
+      ev ? (
+        <Box marginTop={rich ? 1 : 0}>
+          <Text>{C.habitEvidence(habit, ev)}</Text>
+        </Box>
       ) : null,
+      <Box marginTop={rich ? 1 : 0}>
+        <Text>{`Try this: ${words.tryThis}`}</Text>
+      </Box>,
+      liveLine,
       buttons(
         ev ? <Button key="habit-session" label="See the session" onPress={() => setView({ detail: ev.id })} /> : null,
         <Button key="habit-glossary" label={`What is ${words.glossary}?`} onPress={() => setView({ detail: `glossary:${words.glossary}` })} />,
@@ -384,14 +410,26 @@ export function drawPane(
       ),
     )
   } else {
-    habitBlock = section(
-      'Habit of the week',
+    habitBlock = card(
+      'claude',
+      heading('Habit of the week'),
       choice.learned ? <Text color="success">{C.learned(choice.learned)}</Text> : null,
       <Text>Nothing to fix this week. The tips below are the next step.</Text>,
     )
   }
 
-  const winsBlock = ctx.wins.length ? section('Since last time', ...ctx.wins.map(w => <Text color="success">{w.text}</Text>)) : null
+  const winsBlock = ctx.wins.length
+    ? card(
+        'success',
+        heading('Since last time'),
+        ...ctx.wins.map(w => (
+          <Box flexDirection="row">
+            <Text color="success">{'✓ '}</Text>
+            <Text color="success">{w.text}</Text>
+          </Box>
+        )),
+      )
+    : null
 
   // a prompt worth a look
   const graded = choices.grading[row.week]
@@ -400,21 +438,27 @@ export function drawPane(
     promptBlock = section(
       'Your prompt, rewritten',
       <Text dimColor>You wrote</Text>,
-      <Text>{graded.rewrite.before}</Text>,
-      <Text dimColor>Clearer</Text>,
+      <Text italic={rich}>{graded.rewrite.before}</Text>,
+      <Box marginTop={rich ? 1 : 0}>
+        <Text dimColor>Clearer</Text>
+      </Box>,
       <Text color="success">{graded.rewrite.after}</Text>,
-      <Text dimColor>{`The first version took ${graded.rewrite.followUps} follow-up${graded.rewrite.followUps === 1 ? '' : 's'}. ${Math.round(graded.shareAtLeast7 * 100)}% of ${graded.n} graded prompts scored 7 or more out of 10.`}</Text>,
+      <Box marginTop={rich ? 1 : 0}>
+        <Text dimColor>{`The first version took ${graded.rewrite.followUps} follow-up${graded.rewrite.followUps === 1 ? '' : 's'}. ${Math.round(graded.shareAtLeast7 * 100)}% of ${graded.n} graded prompts scored 7 or more out of 10.`}</Text>
+      </Box>,
     )
   } else if (row.best && evidence[row.best]?.excerpt && !Sel.isNotRight(choices, row.best)) {
     const best = evidence[row.best] as Evidence
     promptBlock = section(
       'Your best prompt this week',
-      <Text>{`"${best.excerpt}"`}</Text>,
-      <Text dimColor>
-        {best.numbers.followUps
-          ? 'You named the file and said what done looks like.'
-          : 'You named the file and said what done looks like. Claude finished it in one go.'}
-      </Text>,
+      <Text italic={rich}>{`"${best.excerpt}"`}</Text>,
+      <Box marginTop={rich ? 1 : 0}>
+        <Text dimColor>
+          {best.numbers.followUps
+            ? 'You named the file and said what done looks like.'
+            : 'You named the file and said what done looks like. Claude finished it in one go.'}
+        </Text>
+      </Box>,
     )
   }
 
@@ -425,70 +469,71 @@ export function drawPane(
   const skBlock = skCards[0] ? skillBlock(skCards[0], skCards.length > 1) : null
 
   // progress
-  const history = report.history.filter(w => w.start <= row.start).slice(-12)
-  const series: Series[] = [
-    ...(habit
-      ? [{ label: C.HABIT[habit].title, values: seriesOf(history, w => w.habits[habit] ?? null), better: 'up' as Better, format: C.percent }]
-      : []),
-    { label: 'Typical cost per prompt', values: seriesOf(history, w => w.costPerPrompt), better: 'down', format: C.money },
-    { label: 'Corrections per 10 prompts', values: seriesOf(history, w => w.correctionsPer10), better: 'down', format: n => n.toFixed(1) },
-    { label: 'Oversized sessions', values: seriesOf(history, w => w.oversized), better: 'down', format: n => String(n) },
-    {
-      label: 'Steps spent rediscovering projects',
-      values: seriesOf(history, w => w.discoverySteps),
-      better: 'down',
-      format: n => String(n),
-    },
-  ]
-  const progressBlock =
-    history.length >= 2
-      ? section(
-          `Progress, last ${history.length} weeks`,
-          ...series
-            .filter(s => s.values.some(v => v !== null))
-            .map(s => {
-              const d = trend(s.values)
-              const good = d !== null && d !== 0 && ((s.better === 'down' && d < 0) || (s.better === 'up' && d > 0))
-              const color: Color = d === null || d === 0 ? 'inactive' : good ? 'success' : 'warning'
-              const hex = d === null || d === 0 ? '#8a8a8a' : good ? '#4eba65' : '#e2a33a'
-              const last = [...s.values].reverse().find((v): v is number => v !== null)
-              return (
-                <Box flexDirection="row" columnGap={2}>
-                  <Box width={narrow ? 22 : 36}>
-                    <Text wrap="truncate-end">{s.label}</Text>
-                  </Box>
-                  {spark(s.values, color, hex)}
-                  <Text dimColor>{last === undefined ? '' : s.format(last)}</Text>
-                </Box>
-              )
-            }),
-        )
-      : null
+  const history = F.progressWeeks(report, row)
+  const series = F.progressSeries(history, habit)
+  let progressBlock: RenderElement | null = null
+  if (history.length >= 2 && series.length) {
+    const title = `Progress, last ${history.length} weeks`
+    if (rich) {
+      const trends = F.trendsOf(series, history)
+      progressBlock = open(title, <Box marginTop={1}>{picture(A.trendsSvg(trends, width).source, C.ART.trendsAlt(trends, history.length))}</Box>)
+    } else {
+      progressBlock = section(
+        title,
+        ...series.map(s => {
+          const { tone } = F.direction(s)
+          const color = TONE_COLOR[tone] ?? 'inactive'
+          const last = [...s.values].reverse().find((v): v is number => v !== null)
+          return (
+            <Box flexDirection="row" columnGap={2}>
+              <Box width={narrow ? 22 : 36}>
+                <Text wrap="truncate-end">{s.label}</Text>
+              </Box>
+              <Text color={color}>{glyphs(s.values)}</Text>
+              <Text dimColor>{last === undefined ? '' : s.format(last)}</Text>
+            </Box>
+          )
+        }),
+      )
+    }
+  }
 
   // features
-  const reach = Math.min(3, report.level + 1)
-  const shownFeatures = Object.keys(C.FEATURE_NAME).filter(name => (FEATURE_LEVEL[name] ?? 3) <= Math.max(1, reach))
   const up = report.upNext
-  const featuresBlock = section(
-    "Features you've used",
-    <Box flexDirection="row" flexWrap="wrap" columnGap={2}>
-      {shownFeatures.map(name =>
-        report.features[name] ? (
-          <Text color="success">{`✓ ${C.FEATURE_NAME[name]}`}</Text>
-        ) : (
-          <Text dimColor>{`· ${C.FEATURE_NAME[name]}`}</Text>
-        ),
-      )}
-    </Box>,
-    up ? (
-      <Text>{`Up next: ${C.FEATURE_NAME[up.feature] ?? up.feature}.${up.reason && C.UP_NEXT_REASON[up.reason] ? ` ${C.UP_NEXT_REASON[up.reason]?.(row)}` : ''}`}</Text>
-    ) : null,
-  )
+  const upNext = up ? (
+    <Box flexDirection="row" marginTop={rich ? 1 : 0}>
+      <Text color="claude" bold>{'Up next: '}</Text>
+      <Text>{`${C.FEATURE_NAME[up.feature] ?? up.feature}.${up.reason && C.UP_NEXT_REASON[up.reason] ? ` ${C.UP_NEXT_REASON[up.reason]?.(row)}` : ''}`}</Text>
+    </Box>
+  ) : null
+  let featuresBlock: RenderElement
+  if (rich) {
+    const levels = F.toolkitOf(report)
+    featuresBlock = open(
+      "Features you've used",
+      <Box marginTop={1}>{picture(A.toolkitSvg(levels, width).source, C.ART.toolkitAlt(levels))}</Box>,
+      upNext,
+    )
+  } else {
+    featuresBlock = section(
+      "Features you've used",
+      <Box flexDirection="row" flexWrap="wrap" columnGap={2}>
+        {F.shownFeatures(report).map(name =>
+          report.features[name] ? (
+            <Text color="success">{`✓ ${C.FEATURE_NAME[name]}`}</Text>
+          ) : (
+            <Text dimColor>{`· ${C.FEATURE_NAME[name]}`}</Text>
+          ),
+        )}
+      </Box>,
+      upNext,
+    )
+  }
 
   // tips
   const tips = Sel.chooseTips(report, row, choices, habit, now)
   const tipsBlock = tips.length
-    ? section(
+    ? open(
         'Level up',
         ...tips.map(t => tipBlock(t)),
         buttons(<Button key="tips-all" label="See all tips" hotkey="t" onPress={() => setView({ page: 'tips', detail: null })} />),
@@ -497,13 +542,21 @@ export function drawPane(
 
   // notices
   const noticesBlock = row.notices.length
-    ? section('Also noticed', ...row.notices.slice(0, 3).map(n => <Text color={n.id === 'bypass' ? 'warning' : undefined}>{C.noticeText(n)}</Text>))
+    ? section(
+        'Also noticed',
+        ...row.notices.slice(0, 3).map(n => (
+          <Box flexDirection="row">
+            <Text color={n.id === 'bypass' ? 'warning' : 'claude'}>{`${C.NOTICE_MARK[n.id] ?? '·'} `}</Text>
+            <Text color={n.id === 'bypass' ? 'warning' : undefined}>{C.noticeText(n)}</Text>
+          </Box>
+        )),
+      )
     : null
 
   // footer
   const since = report.coverage.logsSince
   const footer = (
-    <Box flexDirection="column" marginTop={1}>
+    <Box flexDirection="column" marginTop={rich ? 2 : 1}>
       <Text dimColor>Estimated at API list prices. On Pro or Max, this is what your usage would have cost on the API.</Text>
       {since ? <Text dimColor>{`Based on your session logs from ${C.shortDate(since)} on.${report.restored ? ' Some older weeks were restored from a backup.' : ''}`}</Text> : null}
       <Text dimColor>
@@ -515,117 +568,83 @@ export function drawPane(
     </Box>
   )
 
-  return (
-    <Box flexDirection="column" paddingX={1}>
-      {header}
-      {headline}
-      {habitBlock}
-      {winsBlock}
-      {promptBlock}
-      {mdBlock}
-      {skBlock}
-      {progressBlock}
-      {featuresBlock}
-      {tipsBlock}
-      {noticesBlock}
-      {footer}
-    </Box>
-  )
+  return page(top, habitBlock, winsBlock, promptBlock, mdBlock, skBlock, progressBlock, featuresBlock, tipsBlock, noticesBlock, footer)
 
   // -- pieces
 
   function tipBlock(t: Tip): RenderElement {
     const words = C.tipText(t)
-    return (
-      <Box flexDirection="column" marginTop={1}>
-        <Text bold>{words.title}</Text>
-        <Text>{words.body}</Text>
-        {buttons(
-          t.evidence[0] ? <Button key={`tip-session:${t.id}`} label="See the session" onPress={() => setView({ detail: t.evidence[0] ?? null })} /> : null,
-          t.evidence.length ? <Button key={`tip-not-right:${t.id}`} label="Not right?" onPress={() => flag(t.evidence, evidence)} /> : null,
-          <Button key={`tip-dismiss:${t.id}`} label="Dismiss" onPress={() => dismiss(t.id)} />,
-        )}
-      </Box>
+    const kind = C.TIP_KIND[t.category]
+    return card(
+      null,
+      rich && kind ? (
+        <Text color="claude" bold>
+          {kind}
+        </Text>
+      ) : null,
+      <Text bold>{words.title}</Text>,
+      <Text>{words.body}</Text>,
+      buttons(
+        t.evidence[0] ? <Button key={`tip-session:${t.id}`} label="See the session" onPress={() => setView({ detail: t.evidence[0] ?? null })} /> : null,
+        t.evidence.length ? <Button key={`tip-not-right:${t.id}`} label="Not right?" onPress={() => flag(t.evidence, evidence)} /> : null,
+        <Button key={`tip-dismiss:${t.id}`} label="Dismiss" onPress={() => dismiss(t.id)} />,
+      ),
     )
   }
 
-  function claudeMdBlock(card: ClaudeMdCard, full: boolean, more = false): RenderElement {
-    const text = Sel.claudeMdText(card)
-    const ids = card.lines.flatMap(l => l.evidence)
-    const target = card.project === 'All projects' ? '~/.claude/CLAUDE.md' : `${card.project}/CLAUDE.md`
+  function claudeMdBlock(c: ClaudeMdCard, full: boolean, more = false): RenderElement {
+    const text = Sel.claudeMdText(c)
+    const ids = c.lines.flatMap(l => l.evidence)
+    const target = c.project === 'All projects' ? '~/.claude/CLAUDE.md' : `${c.project}/CLAUDE.md`
     return section(
-      card.project === 'All projects' ? 'Teach Claude, in every project' : `Teach Claude this project · ${card.project}`,
-      card.lines.length ? <Text>{C.claudeMdLead(card)}</Text> : null,
-      card.lines.length ? block(text, 'markdown', target) : null,
-      ...card.lines.slice(0, full ? 10 : 3).map(l => (
+      c.project === 'All projects' ? 'Teach Claude, in every project' : `Teach Claude this project · ${c.project}`,
+      c.lines.length ? <Text>{C.claudeMdLead(c)}</Text> : null,
+      c.lines.length ? <Box marginTop={rich ? 1 : 0}>{block(text, 'markdown', target)}</Box> : null,
+      ...c.lines.slice(0, full ? 10 : 3).map(l => (
         <Box flexDirection="row" columnGap={1}>
           <Text dimColor>{C.claudeMdWhy(l)}</Text>
           {full ? <Button key={`line-dismiss:${l.id}`} label="Dismiss" plain dimColor onPress={() => dismiss(l.id)} /> : null}
         </Box>
       )),
-      card.pointers.files.length ? <Text>{C.pointerFiles(card.pointers.files)}</Text> : null,
-      ...card.pointers.tasks.map(task => <Text>{C.pointerTask(task)}</Text>),
-      ...card.notes.filter(n => n.id === 'covered-but-corrected').map(n => <Text dimColor>{C.noteText(n)}</Text>),
+      c.pointers.files.length ? <Text>{C.pointerFiles(c.pointers.files)}</Text> : null,
+      ...c.pointers.tasks.map(task => <Text>{C.pointerTask(task)}</Text>),
+      ...c.notes.filter(n => n.id === 'covered-but-corrected').map(n => <Text dimColor>{C.noteText(n)}</Text>),
       buttons(
-        text ? <Button key={`md-copy:${card.id}`} label="Copy" onPress={press => copy(text, press)} /> : null,
-        ids.length ? <Button key={`md-not-right:${card.id}`} label="Not right?" onPress={() => flag(ids, evidence)} /> : null,
-        <Button key={`md-dismiss:${card.id}`} label="Dismiss" onPress={() => dismiss(card.id)} />,
+        text ? <Button key={`md-copy:${c.id}`} label="Copy" {...(rich ? { variant: 'primary' as const } : {})} onPress={press => copy(text, press)} /> : null,
+        ids.length ? <Button key={`md-not-right:${c.id}`} label="Not right?" onPress={() => flag(ids, evidence)} /> : null,
+        <Button key={`md-dismiss:${c.id}`} label="Dismiss" onPress={() => dismiss(c.id)} />,
         more ? <Button key="md-all" label="See all" hotkey="c" onPress={() => setView({ page: 'claude-md', detail: null })} /> : null,
       ),
     )
   }
 
-  function skillBlock(card: SkillCard, more = false): RenderElement {
-    const follow = card.followUps.find(f => f.text)
-    const canMake = !card.existing && !!card.template
+  function skillBlock(c: SkillCard, more = false): RenderElement {
+    const follow = c.followUps.find(f => f.text)
+    const canMake = !c.existing && !!c.template
     return section(
       'Could be a skill',
-      <Text>{C.skillLead(card)}</Text>,
-      card.template ? (
-        block(card.template, 'text')
+      <Text>{C.skillLead(c)}</Text>,
+      c.template ? (
+        <Box marginTop={rich ? 1 : 0}>{block(c.template, 'text')}</Box>
       ) : (
         <Text dimColor>Turn on prompt excerpts in settings to see it.</Text>
       ),
-      follow ? <Text dimColor>{`You usually follow up with "${follow.text}" (${follow.count} of ${card.count}).`}</Text> : null,
-      canMake ? <Text dimColor>{C.skillUsage(card)}</Text> : null,
+      follow ? <Text dimColor>{`You usually follow up with "${follow.text}" (${follow.count} of ${c.count}).`}</Text> : null,
+      canMake ? <Text dimColor>{C.skillUsage(c)}</Text> : null,
       buttons(
         canMake ? (
           <Button
-            key={`skill-make:${card.id}`}
+            key={`skill-make:${c.id}`}
             label="Make it a skill"
             variant="primary"
-            onPress={() => actions.fill(C.skillRequest(card), 'The request is in the prompt box. Read it, and send it if you want the skill.')}
+            onPress={() => actions.fill(C.skillRequest(c), 'The request is in the prompt box. Read it, and send it if you want the skill.')}
           />
         ) : null,
-        card.template ? <Button key={`skill-copy:${card.id}`} label="Copy template" onPress={press => copy(card.template ?? '', press)} /> : null,
-        card.evidence.length ? <Button key={`skill-not-right:${card.id}`} label="Not right?" onPress={() => flag(card.evidence, evidence)} /> : null,
-        <Button key={`skill-dismiss:${card.id}`} label="Dismiss" onPress={() => dismiss(card.id)} />,
+        c.template ? <Button key={`skill-copy:${c.id}`} label="Copy template" onPress={press => copy(c.template ?? '', press)} /> : null,
+        c.evidence.length ? <Button key={`skill-not-right:${c.id}`} label="Not right?" onPress={() => flag(c.evidence, evidence)} /> : null,
+        <Button key={`skill-dismiss:${c.id}`} label="Dismiss" onPress={() => dismiss(c.id)} />,
         more ? <Button key="skill-all" label="See all" hotkey="s" onPress={() => setView({ page: 'skills', detail: null })} /> : null,
       ),
     )
   }
-}
-
-const FEATURE_LEVEL: Record<string, number> = {
-  'claude-md': 1,
-  'at-mention': 1,
-  image: 1,
-  interrupt: 1,
-  'fresh-start': 1,
-  'ask-checks': 1,
-  'plan-mode': 2,
-  rewind: 2,
-  'model-choice': 2,
-  subagents: 2,
-  'commands-skills': 2,
-  mcp: 2,
-  'allow-rules': 2,
-  compact: 2,
-  hooks: 3,
-  parallel: 3,
-  worktrees: 3,
-  headless: 3,
-  automation: 3,
-  plugins: 3,
-  workflows: 3,
 }

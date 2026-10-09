@@ -1,7 +1,26 @@
 import { describe, expect, test } from 'claude-code/testing'
+import type { ElementQuery, FoundElement } from 'claude-code/testing'
 
 import { REPORT } from './fixtures/report'
 import { boot, SURFACES } from './helpers'
+import type { Surface } from './helpers'
+
+type Drawn = { find: (q: ElementQuery) => Promise<FoundElement | undefined>; findAll: (q: ElementQuery) => Promise<FoundElement[]> }
+
+/** The alt of each picture drawn, top to bottom. */
+async function alts(ui: Drawn): Promise<string[]> {
+  return (await ui.findAll({ type: 'Svg' })).map(p => String(p.props.alt ?? ''))
+}
+
+/**
+ * Whether the week's header says `text`: in words on the terminal, in the
+ * hero picture's alt where the surface draws Svg (the words are in the picture).
+ */
+async function header(ui: Drawn, surface: Surface, text: string | RegExp): Promise<boolean> {
+  if (surface === 'terminal') return (await ui.find({ text })) !== undefined
+  const hero = (await alts(ui))[0] ?? ''
+  return typeof text === 'string' ? hero.includes(text) : text.test(hero)
+}
 
 const SKILL = REPORT.suggestions.skills[0]
 const MD = REPORT.suggestions.claudeMd.find(c => c.project === 'my-app')
@@ -14,8 +33,8 @@ for (const surface of SURFACES) {
       expect(reply.text).toBe('Opened the coach report.')
       expect(seen.opened).toBe(1)
       const ui = await pane()
-      expect(await ui.find({ text: 'Your week with Claude' })).toBeDefined()
-      expect(await ui.find({ text: /28 Sep to 4 Oct · week 1/ })).toBeDefined()
+      expect(await header(ui, surface, 'Your week with Claude')).toBe(true)
+      expect(await header(ui, surface, /28 Sep to 4 Oct · week 1/)).toBe(true)
       for (const title of ['Habit of the week', 'Your best prompt this week', 'Could be a skill', 'Level up', 'Also noticed']) {
         expect(await ui.find({ text: title })).toBeDefined()
       }
@@ -136,11 +155,11 @@ for (const surface of SURFACES) {
       await command('')
       const ui = await pane()
       await ui.press({ key: 'prev' })
-      expect(await ui.find({ text: /21 to 27 Sep/ })).toBeDefined()
+      expect(await header(ui, surface, /21 to 27 Sep/)).toBe(true)
       await ui.press({ key: 'next' })
-      expect(await ui.find({ text: /28 Sep to 4 Oct/ })).toBeDefined()
+      expect(await header(ui, surface, /28 Sep to 4 Oct/)).toBe(true)
       await ui.press({ key: 'this-week' })
-      expect(await ui.find({ text: 'Your week so far' })).toBeDefined()
+      expect(await header(ui, surface, 'Your week so far')).toBe(true)
     })
 
     test('the see-all pages list everything, and lead back', async ($, on) => {
@@ -159,11 +178,29 @@ for (const surface of SURFACES) {
       expect(await ui.find({ text: 'Tips for you' })).toBeDefined()
     })
 
-    test('a narrow pane lays the headline out as lines', async ($, on) => {
+    test('a narrow pane still shows the headline', async ($, on) => {
       const { pane, command } = await boot($, on, surface)
       await command('')
       const ui = await pane(50)
-      expect(await ui.find({ text: 'Sessions:' })).toBeDefined()
+      if (surface === 'terminal') expect(await ui.find({ text: 'Sessions:' })).toBeDefined()
+      else expect(await header(ui, surface, /sessions 10, prompts 18/)).toBe(true)
+    })
+
+    test(surface === 'terminal' ? 'the terminal draws in text, with no pictures' : 'the report is drawn as cards and pictures', async ($, on) => {
+      const { pane, command } = await boot($, on, surface)
+      await command('')
+      const ui = await pane()
+      const drawn = await alts(ui)
+      if (surface === 'terminal') {
+        expect(drawn).toEqual([])
+        expect(await ui.find({ text: /^[▁▂▃▄▅▆▇█ ]+$/ })).toBeDefined()
+        return
+      }
+      expect(drawn[0]).toMatch(/^Your week with Claude, 28 Sep to 4 Oct · week 1: sessions 10, prompts 18, spent \$6\.14/)
+      expect(drawn.some(a => /^\d+% of switches, against a goal of 70%\.$/.test(a))).toBe(true)
+      expect(drawn.some(a => /^The last \d+ weeks: Start fresh when you switch topics/.test(a))).toBe(true)
+      expect(drawn.some(a => /^Features you've used, by level: The basics, \d of 6/.test(a))).toBe(true)
+      expect(await ui.find({ type: 'Markdown', text: '### Habit of the week' })).toBeDefined()
     })
 
     test('before the first scan lands, it says it is reading', async ($, on) => {

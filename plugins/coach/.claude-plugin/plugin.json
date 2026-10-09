@@ -1,6 +1,6 @@
 {
   "name": "coach",
-  "version": "0.1.0",
+  "version": "0.2.1",
   "description": "A weekly coach for how you use Claude Code: one habit at a time from your own sessions, tips at your level, CLAUDE.md lines and skills worth making, and your progress over the weeks",
   "author": { "name": "Aseem Upadhyay", "url": "https://github.com/aseem-upadhyay" },
   "homepage": "https://github.com/aseem-upadhyay/qol-mods/tree/main/plugins/coach",
