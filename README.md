@@ -51,6 +51,7 @@ Then type `/reload-plugins` in any session that was already open.
 ```
 .claude-plugin/marketplace.json   the catalogue: every mod in this repo
 plugins/<mod>/                    one self-contained plugin per mod, with its own README
+shared/                           code more than one mod uses; each keeps a copy (scripts/sync-shared.py)
 scripts/                          helpers for maintaining the mods, such as drawing README images
 ```
 

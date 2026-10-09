@@ -404,17 +404,25 @@ export const register: Register = on => {
       }
     }
 
+    // Other mods draw bands here too: keep what a plugin beneath drew, stacked
+    // under this line, instead of answering for the whole band. The engine's
+    // own drawing is left out, as it always was here.
+    const beneath = await next(e)
+    const below = beneath.type === 'engine' ? null : beneath
     return (
-      <Box width="100%" justifyContent="space-between">
-        <Box flexShrink={1}>
-          <Text wrap="truncate-end">{texts(chosen.left)}</Text>
+      <Box flexDirection="column" width="100%">
+        <Box width="100%" justifyContent="space-between">
+          <Box flexShrink={1}>
+            <Text wrap="truncate-end">{texts(chosen.left)}</Text>
+          </Box>
+          <Box flexShrink={0} alignItems="center">
+            <Text>{texts(chosen.before)}</Text>
+            {spark === null ? null : <Text>{'  '}</Text>}
+            {spark}
+            <Text>{texts(chosen.after)}</Text>
+          </Box>
         </Box>
-        <Box flexShrink={0} alignItems="center">
-          <Text>{texts(chosen.before)}</Text>
-          {spark === null ? null : <Text>{'  '}</Text>}
-          {spark}
-          <Text>{texts(chosen.after)}</Text>
-        </Box>
+        {below}
       </Box>
     )
   })

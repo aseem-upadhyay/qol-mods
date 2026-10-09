@@ -28,6 +28,8 @@ type Setup = {
   /** What scan.py prints; a string is its stderr on a failed run instead. */
   scan: History | string
   cwd?: string
+  /** A line another mod's band draws beneath this one; absent, only the engine's own. */
+  beneath?: string
 }
 
 /** Answers everything the band asks the engine for, then starts the session. */
@@ -35,6 +37,13 @@ async function boot($: Engine, on: On, surface: (typeof SURFACES)[number], setup
   const clock = mock.clock(on, { now: START })
   mock.env(on, { HOME: '/home/me' })
   const seen: { scan: readonly string[] } = { scan: [] }
+
+  // Beneath the plugin: another mod's band, or the engine's own drawing.
+  on('ui.render', { component: 'AbovePrompt' }, async (below, e) => {
+    if (setup.beneath === undefined) return { type: 'engine', ref: 0 }
+    const { Text } = below.ui.resolve(e)
+    return Text({ children: setup.beneath })
+  })
 
   on('process.run', async (_$, e) => {
     if (e.argv[0] === 'git') {
@@ -202,6 +211,13 @@ for (const surface of SURFACES) {
       expect(await ui.find({ text: '≈' })).toBeDefined()
       expect(await ui.find({ text: '+' })).toBeDefined()
       expect(await ui.find({ text: 'no price: claude-future-9' })).toBeDefined()
+    })
+
+    test('keeps the bands other mods draw beneath it', async ($, on) => {
+      const { mount } = await boot($, on, surface, { scan: HISTORY, beneath: 'another mod' })
+      const ui = await mount(120)
+      expect(await ui.find({ text: 'my.app' })).toBeDefined()
+      expect(await ui.find({ text: 'another mod' })).toBeDefined()
     })
 
     test('says so when python3 is missing, and still shows the session', async ($, on) => {

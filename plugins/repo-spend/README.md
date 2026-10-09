@@ -25,6 +25,7 @@ What your Claude Code sessions cost, per repo, live, right above the prompt.
 - 💳 **Works for API keys and subscriptions.** On an API key it shows the credits you've burned. On Pro or Max it shows what your usage would have cost at API prices, so you can see how much value you're getting from your plan.
 - 📈 **Live burn rate.** This session's cost and its pace over the last 30 minutes, with a sparkline that turns amber and then red as the pace climbs.
 - 📐 **Fits any width.** At narrower widths it drops the least important details rather than cutting the line off.
+- 🧩 **Plays well with other mods.** Bars other mods draw above the prompt stack beneath it instead of being hidden.
 - 🔒 **Local only.** It reads the session logs Claude Code already keeps on your machine and sends nothing anywhere.
 - ⚡ **Cheap.** Only changed logs are re-read, so a rescan of a busy repo takes about 0.1 s.
 
@@ -84,7 +85,7 @@ The live session's cost comes straight from Claude Code. Past sessions come from
 | Past sessions with a Claude Code `cost-state` record | Exact: Claude Code's own ledger |
 | Older past sessions without one | Estimated from each message's tokens × list price; the total shows **≈** |
 
-The estimates use the list prices in [`hooks/scan.py`](hooks/scan.py) (`PRICES`, dated by `PRICES_UPDATED`). Compared with sessions that do have a ledger, they usually come out a few percent low. Server-side tools such as web search aren't priced.
+The estimates use the list prices in [`hooks/pricing.py`](hooks/pricing.py) (`PRICES`, dated by `PRICES_UPDATED`). Compared with sessions that do have a ledger, they usually come out a few percent low. Server-side tools such as web search aren't priced.
 
 A model missing from the price table counts as $0. The bar flags it in amber (`+` after the total, and `no price: <model>` when there's room), so you know the total is too low.
 
@@ -127,7 +128,13 @@ Run it from a working copy without installing:
 claude --plugin-dir plugins/repo-spend
 ```
 
-When Anthropic's prices change, edit `PRICES` and `PRICES_UPDATED` in `hooks/scan.py`. A new `PRICES_UPDATED` also clears the scan cache.
+When Anthropic's prices change, edit `PRICES` and `PRICES_UPDATED` in `shared/pricing.py` at the repository root, then copy it into every mod that prices with it:
+
+```bash
+python3 scripts/sync-shared.py
+```
+
+A new `PRICES_UPDATED` also clears the scan cache. The tests fail while `hooks/pricing.py` differs from the shared copy.
 
 Every change ships as a new `version` in `.claude-plugin/plugin.json`. Installed copies are cached by version, and the desktop app's sessions run that cached copy. An edit under the same version never reaches them. After committing a new version:
 
