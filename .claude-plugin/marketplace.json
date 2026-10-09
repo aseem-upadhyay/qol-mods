@@ -1,0 +1,12 @@
+{
+  "name": "aseem-mods",
+  "owner": { "name": "Aseem Upadhyay", "url": "https://github.com/aseem-upadhyay" },
+  "metadata": { "description": "Mods for Claude Code by Aseem Upadhyay" },
+  "plugins": [
+    {
+      "name": "repo-spend",
+      "source": "./plugins/repo-spend",
+      "description": "A bar above the prompt: dollars spent on the current repo to date, and this session's live spend and burn rate"
+    }
+  ]
+}

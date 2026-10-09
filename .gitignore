@@ -1,0 +1,6 @@
+# Laid by Claude Code when a mod hot-reloads; regenerated per machine.
+.claude-plugin/types/
+plugins/*/.claude-plugin/types/
+tsconfig.json
+.DS_Store
+__pycache__/
