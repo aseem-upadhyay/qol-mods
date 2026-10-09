@@ -45,10 +45,10 @@ plugins/<mod>/                    one self-contained plugin per mod, with its ow
 scripts/                          helpers for maintaining the mods, such as drawing README images
 ```
 
-## Adding a mod
+## Adding or changing a mod
 
-1. Put the plugin in `plugins/<mod>/`, with a `.claude-plugin/plugin.json` and a README.
-2. List it in `.claude-plugin/marketplace.json`.
+1. Put the plugin in `plugins/<mod>/`, with a `.claude-plugin/plugin.json` and a README, and list it in `.claude-plugin/marketplace.json`.
+2. Raise `version` in its `plugin.json` with every change. Installed copies are cached by version, so a change under the same version never reaches anyone, including your own desktop sessions.
 3. Check it, then commit:
 
 ```bash

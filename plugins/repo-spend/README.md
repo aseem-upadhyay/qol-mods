@@ -112,7 +112,15 @@ Run it from a working copy without installing:
 claude --plugin-dir plugins/repo-spend
 ```
 
-When Anthropic's prices change, edit `PRICES` and `PRICES_UPDATED` in `hooks/scan.py` and raise `version` in `.claude-plugin/plugin.json`. A new `PRICES_UPDATED` also clears the scan cache.
+When Anthropic's prices change, edit `PRICES` and `PRICES_UPDATED` in `hooks/scan.py`. A new `PRICES_UPDATED` also clears the scan cache.
+
+Every change ships as a new `version` in `.claude-plugin/plugin.json`. Installed copies are cached by version, and the desktop app's sessions run that cached copy. An edit under the same version never reaches them. After committing a new version:
+
+```bash
+claude plugin marketplace update aseem-mods && claude plugin update repo-spend@aseem-mods
+```
+
+Then type `/reload-plugins` in each open session; new sessions pick it up on their own.
 
 The images in `assets/` are drawn by `scripts/repo-spend-assets.py`:
 
