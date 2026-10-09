@@ -12,7 +12,7 @@ import os, sys
 
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
 SHARED = {
-    "pricing.py": ["plugins/repo-spend/hooks"],
+    "pricing.py": ["plugins/repo-spend/hooks", "plugins/coach/hooks"],
 }
 
 

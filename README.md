@@ -28,6 +28,16 @@ How much have you burned on this repo, and how much value are you getting from y
 /plugin install repo-spend --marketplace aseem-upadhyay/qol-mods
 ```
 
+### [coach](plugins/coach)
+
+How well are you using Claude Code, and what's the one thing to get better at next? A weekly report built from your own sessions: one habit to work on, with the session it came from; CLAUDE.md lines for what Claude keeps rediscovering; prompts you keep typing that could be skills; tips at your level; and your progress over the weeks. Everything stays on your machine.
+
+<img src="plugins/coach/assets/preview-cli.svg" alt="A Claude Code terminal with the coach report open: last week's sessions, prompts and spend; the habit of the week, start fresh when you switch topics, with the session it came from; two CLAUDE.md lines to copy; and a prompt typed five times that could be a skill. Above the prompt, the coach line keeps the habit in view." width="100%">
+
+```
+/plugin install coach --marketplace aseem-upadhyay/qol-mods
+```
+
 ## Install
 
 Every mod installs the same way. Type this at the prompt of a Claude Code terminal session, replacing `<mod>` with the mod's name:

@@ -1,0 +1,63 @@
+{
+  "name": "coach",
+  "version": "0.1.0",
+  "description": "A weekly coach for how you use Claude Code: one habit at a time from your own sessions, tips at your level, CLAUDE.md lines and skills worth making, and your progress over the weeks",
+  "author": { "name": "Aseem Upadhyay", "url": "https://github.com/aseem-upadhyay" },
+  "homepage": "https://github.com/aseem-upadhyay/qol-mods/tree/main/plugins/coach",
+  "repository": "https://github.com/aseem-upadhyay/qol-mods",
+  "license": "MIT",
+  "keywords": ["coach", "habits", "usage", "cost", "claude-md", "skills"],
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "excludeProjects": {
+      "type": "string",
+      "title": "Projects to leave out",
+      "description": "Comma-separated folder paths coach never reads, such as private client work",
+      "default": ""
+    },
+    "storeExcerpts": {
+      "type": "boolean",
+      "title": "Keep prompt excerpts",
+      "description": "Keep short, scrubbed cuts of your prompts as evidence. Off also turns off the CLAUDE.md lines and skill templates made from your own words",
+      "default": true
+    },
+    "contextThresholdK": {
+      "type": "number",
+      "title": "Oversized session (thousands of tokens)",
+      "description": "A session whose context passes this many thousand tokens counts as oversized",
+      "default": 300
+    },
+    "weekStartsOn": {
+      "type": "string",
+      "title": "Week starts on",
+      "description": "The day each weekly report starts",
+      "options": ["monday", "sunday"],
+      "default": "monday"
+    },
+    "promptGrading": {
+      "type": "boolean",
+      "title": "Grade prompts with a model",
+      "description": "Once a week, send a sample of up to 20 opening prompts to Anthropic to be scored and one rewritten. Costs about a cent a week with Haiku",
+      "default": false
+    },
+    "gradingModel": {
+      "type": "string",
+      "title": "Grading model",
+      "description": "The model that grades prompts",
+      "options": ["haiku", "sonnet"],
+      "default": "haiku"
+    },
+    "gradingCapUsd": {
+      "type": "number",
+      "title": "Grading cap (USD a week)",
+      "description": "Skip a week's grading when its estimate is over this",
+      "default": 0.25
+    },
+    "liveHints": {
+      "type": "boolean",
+      "title": "Live hints",
+      "description": "Short hints at the moment they apply, at most one every 30 minutes and three a day",
+      "default": false
+    }
+  }
+}

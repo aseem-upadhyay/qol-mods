@@ -1,0 +1,14 @@
+{
+  "inputs": [
+    "Write release notes for v2.4.1 from the merged PRs, grouped by area",
+    "fix the bug in src/auth/session.ts, see https://example.com/issues/42",
+    "Rename `getUserById` to \"findUser\" in PROJ-123 and #456",
+    "the deploy failed at commit 3f9a2b7c, retry it 3 times",
+    "I need to migrate the Orders page to the new layout",
+    "Don’t touch the “generated” folder",
+    "run pnpm test -- --watch=false on apps/web",
+    "UPPER case WORDS and MixedCase too",
+    "",
+    "Is it done yet?"
+  ]
+}
