@@ -3,9 +3,11 @@
 
 Run: python3 scripts/repo-spend-assets.py
 
-Text is laid on a fixed character grid (textLength pins every run to its
-cells), so the images line up the same whatever monospace font a viewer has.
-The example figures are made up.
+The terminal images lay text on a fixed character grid (textLength pins every
+run to its cells), so they line up the same whatever monospace font a viewer
+has. The desktop image uses the system sans font, as the app does: its left
+group flows from the left edge and its right group is anchored to the right
+edge, so no font can make them collide. The example figures are made up.
 """
 import os
 from xml.sax.saxutils import escape
@@ -28,6 +30,14 @@ CAPTION = "#8b949e"  # GitHub's muted grey: legible on its light and dark themes
 SANS = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif"
 # A full bar stands for at least one 3-minute slice at $15/hr, as in the band.
 SPARK_FLOOR = 15 * 3 / 60
+
+# The desktop app's dark theme.
+D_BG = "#171717"
+D_CHROME = "#1f1f1f"
+D_PANEL = "#262626"
+D_EDGE = "#333333"
+D_TEXT = "#ececec"
+D_DIM = "#9b9b9b"
 
 # ---------------------------------------------------------------- primitives
 
@@ -138,7 +148,7 @@ def svg(w, h, body, title):
     )
 
 
-def preview():
+def preview_cli():
     cols, pad = 116, 24
     w = round(cols * CW + 2 * pad)
     x0 = pad
@@ -192,6 +202,99 @@ def preview():
     return svg(w, h, chrome + "".join(rows), title)
 
 
+def tspans(parts):
+    """(text, color, bold) parts as tspans that flow in one <text>."""
+    out = []
+    for part in parts:
+        text = part[0]
+        color = part[1] if len(part) > 1 else D_TEXT
+        weight = ' font-weight="600"' if len(part) > 2 and part[2] else ""
+        out.append(f'<tspan fill="{color}"{weight}>{escape(text)}</tspan>')
+    return "".join(out)
+
+
+def desktop_spark(x, bottom, bars, color):
+    """The desktop sparkline as the band draws it: 4px rounded bars, 2px apart,
+    scaled to the busiest slice (SPARK_FLOOR at least), empty slices a faint stub."""
+    peak = max(max(bars), SPARK_FLOOR)
+    out = []
+    for i, v in enumerate(bars):
+        h = max(3, round(v / peak * 12)) if v > 0 else 2
+        fill, opacity = (color, 1) if v > 0 else (LEVEL["idle"], 0.45)
+        out.append(
+            f'<rect x="{x + i * 6}" y="{bottom - h}" width="4" height="{h}" rx="1" '
+            f'fill="{fill}" fill-opacity="{opacity}"/>'
+        )
+    return "".join(out)
+
+
+def preview_desktop():
+    w, h = 920, 392
+    pad = 48
+    rows = []
+
+    # The prompt in a right-aligned bubble; its text is centred, so a wider or
+    # narrower font shares the difference between both sides.
+    ask = "add retry with backoff to the API client"
+    bubble_w = round(len(ask) * 6.4) + 36
+    bubble_x = w - pad - bubble_w
+    rows.append(f'<rect x="{bubble_x}" y="62" width="{bubble_w}" height="40" rx="14" fill="{D_PANEL}"/>')
+    rows.append(f'<text x="{bubble_x + bubble_w / 2:.0f}" y="87" text-anchor="middle" fill="{D_TEXT}" font-size="14">{escape(ask)}</text>')
+
+    # The reply, an edit, and the wrap-up.
+    rows.append(f'<text x="{pad}" y="140" fill="{D_TEXT}" font-size="14">'
+                f"I'll add exponential backoff to src/api/client.ts and cover it with a test.</text>")
+    rows.append(f'<rect x="{pad}" y="158" width="232" height="32" rx="8" fill="{D_CHROME}" stroke="{D_EDGE}"/>')
+    rows.append(f'<text x="{pad + 14}" y="179" font-size="13" xml:space="preserve">'
+                + tspans([("Edited", D_DIM), ("  src/api/client.ts", D_TEXT), ("  +18", LEVEL["calm"]), ("  −3", LEVEL["hot"])])
+                + "</text>")
+    rows.append(f'<text x="{pad}" y="226" fill="{D_TEXT}" font-size="14">'
+                f"Done. Requests now retry up to 3 times (250ms → 1s → 4s), and the new test passes.</text>")
+
+    # The band: a rounded panel above the message box.
+    top, bh = 254, 40
+    base = top + 25
+    rows.append(f'<rect x="24" y="{top}" width="{w - 48}" height="{bh}" rx="12" fill="{D_PANEL}"/>')
+    rows.append(f'<text x="44" y="{base}" font-size="13" xml:space="preserve">' + tspans([
+        ("◆ ", CLAUDE), ("my-app", D_TEXT, True), ("   ≈", D_DIM), ("$1,284.50", CLAUDE, True),
+        (" last 3 months", D_DIM), ("  ·  ", D_DIM), ("$12.30",), (" today", D_DIM),
+        ("  ·  ", D_DIM), ("$96.75",), (" last 7d", D_DIM),
+    ]) + "</text>")
+    right = w - 44
+    rows.append(f'<text x="{right}" y="{base}" text-anchor="end" font-size="13" fill="{LEVEL["calm"]}" font-weight="600">$6.04/hr</text>')
+    spark_end = right - 58 - 12
+    rows.append(desktop_spark(spark_end - 58, base - 1, BARS, LEVEL["calm"]))
+    rows.append(f'<text x="{spark_end - 58 - 12}" y="{base}" text-anchor="end" font-size="13" xml:space="preserve">'
+                + tspans([("$4.12", D_TEXT, True), (" this session", D_DIM)]) + "</text>")
+
+    # The message box and its send button.
+    box = top + bh + 12
+    rows.append(f'<rect x="24" y="{box}" width="{w - 48}" height="64" rx="16" fill="{D_CHROME}" stroke="{D_EDGE}"/>')
+    rows.append(f'<text x="44" y="{box + 37}" fill="{D_DIM}" font-size="14">Reply to Claude…</text>')
+    cx, cy = w - 56, box + 32
+    rows.append(f'<circle cx="{cx}" cy="{cy}" r="16" fill="{CLAUDE}"/>')
+    rows.append(f'<path d="M{cx} {cy + 7}V{cy - 7}M{cx - 6} {cy - 1}l6-6 6 6" stroke="{D_BG}" stroke-width="2.2" '
+                f'fill="none" stroke-linecap="round" stroke-linejoin="round"/>')
+
+    chrome = (
+        f'<rect width="{w}" height="{h}" rx="12" fill="{D_BG}"/>'
+        f'<path d="M0 12a12 12 0 0 1 12-12h{w - 24}a12 12 0 0 1 12 12v24H0z" fill="{D_CHROME}"/>'
+        f'<circle cx="22" cy="18" r="6" fill="#ff5f57"/>'
+        f'<circle cx="42" cy="18" r="6" fill="#febc2e"/>'
+        f'<circle cx="62" cy="18" r="6" fill="#28c840"/>'
+        f'<text x="{w / 2:.0f}" y="23" text-anchor="middle" fill="{D_DIM}" font-size="12">Claude · my-app</text>'
+        f'<rect x="0.5" y="0.5" width="{w - 1}" height="{h - 1}" rx="12" fill="none" stroke="{D_EDGE}"/>'
+    )
+    title = ("repo-spend in the Claude desktop app: above the message box, a bar shows $1,284.50 spent on "
+             "my-app in the last 3 months, $12.30 today, $96.75 in the last 7 days, and $4.12 this session "
+             "burning $6.04 an hour, with a small bar chart")
+    return (
+        f'<svg xmlns="http://www.w3.org/2000/svg" width="{w}" height="{h}" viewBox="0 0 {w} {h}" '
+        f'role="img" aria-label="{escape(title)}" font-family="{SANS}">'
+        f"<title>{escape(title)}</title>{chrome}{''.join(rows)}</svg>\n"
+    )
+
+
 def layouts():
     pad, gap = 14, 30
     width_cols = 116
@@ -242,7 +345,12 @@ def layouts():
 
 if __name__ == "__main__":
     os.makedirs(OUT, exist_ok=True)
-    for name, make in (("preview.svg", preview), ("layouts.svg", layouts)):
+    outputs = (
+        ("preview-desktop.svg", preview_desktop),
+        ("preview-cli.svg", preview_cli),
+        ("layouts.svg", layouts),
+    )
+    for name, make in outputs:
         with open(os.path.join(OUT, name), "w") as fh:
             fh.write(make())
         print("wrote", os.path.normpath(os.path.join(OUT, name)))

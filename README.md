@@ -18,7 +18,11 @@ Each one fixes a small annoyance or builds a good habit.
 
 How much have you burned on this repo, and how much value are you getting from your plan? A live bar above the prompt shows the repo's total over the time your logs cover ("last 3 months"), today, the last 7 days, and this session's cost and burn rate. On an API key that's the credits you've spent; on Pro or Max, what your usage would have cost at API prices.
 
-<a href="plugins/repo-spend"><img src="plugins/repo-spend/assets/preview.svg" alt="repo-spend's bar above the Claude Code prompt: my-app, about $1,284.50 in the last 3 months, $12.30 today, $96.75 in the last 7 days, $4.12 this session at $6.04 an hour." width="100%"></a>
+<img src="plugins/repo-spend/assets/preview-desktop.svg" alt="The Claude desktop app. Above the message box, a rounded bar reads: my-app, about $1,284.50 in the last 3 months, $12.30 today, $96.75 in the last 7 days; on the right, $4.12 this session, a small green bar chart, and $6.04 an hour." width="100%">
+<p><sub>In the Claude desktop app</sub></p>
+
+<img src="plugins/repo-spend/assets/preview-cli.svg" alt="A Claude Code terminal. Above the prompt, a one-line bar reads: my-app, about $1,284.50 in the last 3 months, $12.30 today, $96.75 in the last 7 days; on the right, $4.12 this session, a green sparkline, and $6.04 an hour." width="100%">
+<p><sub>In the terminal (<code>claude</code>)</sub></p>
 
 ```
 /plugin install repo-spend --marketplace aseem-upadhyay/qol-mods
