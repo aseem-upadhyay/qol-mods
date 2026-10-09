@@ -372,6 +372,62 @@ export function weekQuestion(row: WeekRow): string {
   return `Look at my coach report for ${when} (the mcp__coach__report tool) and walk me through it: what changed from the week before, and what should I work on first?`
 }
 
+// -- the pictures (desktop, VS Code, mobile)
+
+const LETTERS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
+
+export const ART = {
+  kicker: (weekNo: number | null, early: boolean) =>
+    early ? 'Coach · early read' : weekNo ? `Coach · week ${weekNo}` : 'Coach',
+  subline: (range: string, activeDays: number, notes: string[]) =>
+    [range, plural(activeDays, 'active day'), ...notes].join(' · '),
+  days: 'Spend by day',
+  dayLetter: (weekday: number) => LETTERS[weekday] ?? '',
+  caption: 'Arrows compare with your average for the 4 weeks before.',
+  change: (pct: number) => `${pct >= 0 ? '▲' : '▼'} ${Math.round(Math.abs(pct) * 100)}%`,
+  steady: 'steady',
+  fromZero: '▲ from 0',
+  goal: (target: number) => `goal ${percent(target)}`,
+  heroAlt: (title: string, range: string, stats: { label: string; value: string }[]) =>
+    `${title}, ${range}: ${stats.map(s => `${s.label.toLowerCase()} ${s.value}`).join(', ')}.`,
+  ringAlt: (value: number | null, target: number, unit: string) =>
+    value === null ? `No ${unit} yet.` : `${percent(value)} of ${unit}, against a goal of ${percent(target)}.`,
+  score: (done: number, total: number, unit: string, target: number) => `${done} of ${total} ${unit} · goal ${percent(target)}`,
+  dotsAlt: (done: number, total: number, unit: string) => `${done} of ${total} ${unit} this week so far.`,
+  trendsAlt: (trends: { label: string; value: string; delta: string | null }[], weeks: number) =>
+    `The last ${plural(weeks, 'week')}: ${trends.map(t => `${t.label} ${t.value}${t.delta ? ` (${t.delta})` : ''}`).join('; ')}.`,
+  toolkitAlt: (levels: { name: string; count: string }[]) =>
+    `Features you've used, by level: ${levels.map(l => `${l.name}, ${l.count}`).join('; ')}.`,
+  scanAlt: (done: number, total: number) => `${done} of ${total} files read.`,
+}
+
+export const TIP_KIND: Record<string, string> = {
+  cost: 'Cost',
+  context: 'Context',
+  flow: 'Workflow',
+  safety: 'Safety',
+  setup: 'Setup',
+  automation: 'Automation',
+  prompt: 'Prompts',
+}
+
+export const NOTICE_MARK: Record<string, string> = {
+  bypass: '⚠',
+  'cost-spike': '↗',
+  'api-errors': '!',
+  unpriced: '?',
+}
+
+export const LEVEL_NAME: Record<number, string> = {
+  1: 'The basics',
+  2: 'Everyday power',
+  3: 'Advanced',
+}
+
+export function levelCount(used: number, total: number): string {
+  return `${used} of ${total}`
+}
+
 // -- the bar (SPEC.md §4.4, §11.3)
 
 export const BAR = {
