@@ -34,7 +34,7 @@ Answer `y` to add the marketplace (only the first time), then pick the **user** 
 To pick up new versions:
 
 ```bash
-claude plugin marketplace update aseem-mods
+claude plugin marketplace update ui-mods
 ```
 
 ## Layout
