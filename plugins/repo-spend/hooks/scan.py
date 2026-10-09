@@ -7,7 +7,7 @@ Every ~/.claude/projects/<slug>* folder whose slug starts with the repo's
 (the repo itself and each of its worktrees) is read. Per session:
   - a `cost-state` record (Claude Code's own /cost ledger) wins when present;
   - otherwise the cost is estimated from each assistant message's usage,
-    deduplicated by message id, priced with PRICES below, subagents included.
+    deduplicated by message id, priced with pricing.py, subagents included.
 Per-file results are cached by (size, mtime, PRICES_UPDATED), so only changed
 files re-read, and a session keeps counting after Claude Code deletes its log.
 Prints one JSON object:
@@ -19,61 +19,11 @@ is a floor).
 """
 import json, os, sys, time, datetime
 
-# List prices in $ per million tokens:
-#   (input, output, cache read, cache write 5m, cache write 1h)
-# Matched by longest model-id prefix. Only sessions WITHOUT a cost-state record
-# use this table; Claude Code's own ledger wins wherever it exists. Update it
-# when Anthropic's pricing changes (https://claude.com/pricing) and bump the
-# plugin version. Checked against Claude Code's cost-state totals for Opus.
-PRICES_UPDATED = "2026-10-09"
-PRICES = {
-    "claude-fable-5": (10, 50, 1.0, 12.5, 20),
-    "claude-fable-5-1": (10, 50, 0.25, 12.5, 20),
-    "claude-opus-5-5": (4, 20, 0.2, 5, 8),
-    "claude-opus-5": (5, 25, 0.5, 6.25, 10),
-    "claude-opus-4": (5, 25, 0.5, 6.25, 10),
-    "claude-sonnet-5-5": (2, 10, 0.2, 2.5, 4),
-    "claude-sonnet-5": (2, 10, 0.2, 2.5, 4),
-    "claude-sonnet-4": (3, 15, 0.3, 3.75, 6),
-    "claude-haiku-5-5": (0.1, 0.5, 0.01, 0.125, 0.2),
-    "claude-haiku-4": (1, 5, 0.1, 1.25, 2),
-}
-
-
-def price_for(model):
-    best = None
-    for key in PRICES:
-        if model.startswith(key) and (best is None or len(key) > len(best)):
-            best = key
-    return PRICES.get(best)
-
-
-def tokens_in(u):
-    return sum((u.get(k) or 0) for k in (
-        "input_tokens", "output_tokens",
-        "cache_read_input_tokens", "cache_creation_input_tokens"))
-
-
-def message_cost(model, u):
-    """-> (usd, priced). An unknown model costs 0 and reports priced=False."""
-    p = price_for(model or "")
-    if not p:
-        return 0.0, False
-    cc = u.get("cache_creation") or {}
-    w1h = cc.get("ephemeral_1h_input_tokens")
-    w5m = cc.get("ephemeral_5m_input_tokens")
-    if w1h is None and w5m is None:
-        w5m, w1h = u.get("cache_creation_input_tokens", 0) or 0, 0
-    total = (
-        (u.get("input_tokens") or 0) * p[0]
-        + (u.get("output_tokens") or 0) * p[1]
-        + (u.get("cache_read_input_tokens") or 0) * p[2]
-        + (w5m or 0) * p[3]
-        + (w1h or 0) * p[4]
-    )
-    if u.get("speed") == "fast":
-        total *= 2
-    return total / 1e6, True
+# Prices live in pricing.py, a copy of the repository's shared/pricing.py
+# (scripts/sync-shared.py keeps them the same). Only sessions WITHOUT a
+# cost-state record use them; Claude Code's own ledger wins wherever it exists.
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from pricing import PRICES_UPDATED, message_cost, tokens_in  # noqa: E402
 
 
 def oldest(msgs):

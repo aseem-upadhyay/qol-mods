@@ -149,5 +149,17 @@ class ScanTest(unittest.TestCase):
         self.assertEqual(self.scan(), self.scan())
 
 
+class PricingCopyTest(unittest.TestCase):
+    def test_pricing_is_the_shared_copy(self):
+        # Only in the repository: an installed plugin has no shared/ beside it.
+        shared = os.path.join(os.path.dirname(__file__), "..", "..", "..", "shared", "pricing.py")
+        if not os.path.exists(shared):
+            self.skipTest("no shared/ folder")
+        mine = os.path.join(os.path.dirname(__file__), "..", "hooks", "pricing.py")
+        with open(shared, "rb") as a, open(mine, "rb") as b:
+            self.assertEqual(a.read(), b.read(),
+                             "hooks/pricing.py differs: run python3 scripts/sync-shared.py")
+
+
 if __name__ == "__main__":
     unittest.main()
