@@ -78,6 +78,39 @@ class ScanTest(unittest.TestCase):
                             "ephemeral_5m_input_tokens": 0})])
         self.assertAlmostEqual(self.scan()["usd"], 8.0)
 
+    def test_deleted_logs_keep_counting(self):
+        # Claude Code deletes old logs (cleanupPeriodDays); a session the scan
+        # has already seen stays in the total, scan after scan.
+        self.write(SLUG, "old.jsonl", [
+            assistant("m1", "claude-opus-5-5", output_tokens=1_000_000),
+            {"type": "cost-state", "totalCostUSD": 21.0},
+        ])
+        self.write(SLUG, "old/subagents/agent-1.jsonl", [
+            assistant("m2", "claude-opus-5-5", input_tokens=1_000_000)])
+        self.write(SLUG, "new.jsonl", [
+            assistant("m3", "claude-sonnet-5-5", output_tokens=1_000_000)])
+        before = self.scan()
+        self.assertAlmostEqual(before["usd"], 31.0)
+
+        os.remove(os.path.join(self.projects, SLUG, "old.jsonl"))
+        os.remove(os.path.join(self.projects, SLUG, "old", "subagents", "agent-1.jsonl"))
+        for _ in range(2):
+            after = self.scan()
+            self.assertAlmostEqual(after["usd"], 31.0)
+            self.assertEqual(after["sessions"], 2)
+
+    def test_deleted_estimates_keep_their_flags(self):
+        self.write(SLUG, "a.jsonl", [
+            assistant("m1", "claude-opus-5-5", output_tokens=1_000_000),
+            assistant("m2", "claude-future-9", output_tokens=5),
+        ])
+        self.scan()
+        os.remove(os.path.join(self.projects, SLUG, "a.jsonl"))
+        r = self.scan()
+        self.assertAlmostEqual(r["usd"], 20.0)
+        self.assertAlmostEqual(r["estimatedUsd"], 20.0)
+        self.assertEqual(r["unpriced"], ["claude-future-9"])
+
     def test_cache_reuse_gives_same_answer(self):
         self.write(SLUG, "a.jsonl", [
             assistant("m1", "claude-opus-5-5", output_tokens=1_000_000)])

@@ -8,7 +8,8 @@ Every ~/.claude/projects/<slug>* folder whose slug starts with the repo's
   - a `cost-state` record (Claude Code's own /cost ledger) wins when present;
   - otherwise the cost is estimated from each assistant message's usage,
     deduplicated by message id, priced with PRICES below, subagents included.
-Per-file results are cached by (size, mtime), so only changed files re-read.
+Per-file results are cached by (size, mtime, PRICES_UPDATED), so only changed
+files re-read, and a session keeps counting after Claude Code deletes its log.
 Prints one JSON object:
   {"usd", "sessions", "estimatedUsd", "today", "week", "unpriced": [model, ...]}
 where "unpriced" names models that used tokens but have no row in PRICES
@@ -117,7 +118,17 @@ def scan_file(path):
     return {"ledger": ledger, "msgs": msgs}
 
 
-CACHE_VERSION = 3
+CACHE_VERSION = 4
+
+
+def fold(msgs):
+    """A deleted log's messages, folded into one total (and one row per
+    unpriced model), so it keeps counting without keeping every message."""
+    last = max((m[1] for m in msgs.values()), default=0)
+    folded = {"#total": [sum(m[0] for m in msgs.values()), last, ""]}
+    for model in {m[2] for m in msgs.values() if m[2]}:
+        folded["#unpriced:" + model] = [0.0, last, model]
+    return folded
 
 
 def main():
@@ -126,15 +137,22 @@ def main():
     try:
         with open(cache_path) as fh:
             cache = json.load(fh)
-        if cache.get("v") != CACHE_VERSION or cache.get("prices") != PRICES_UPDATED:
+        if cache.get("v") != CACHE_VERSION:
             raise ValueError("stale cache")
     except (OSError, ValueError):
-        cache = {"v": CACHE_VERSION, "prices": PRICES_UPDATED, "files": {}}
+        cache = {"v": CACHE_VERSION, "files": {}}
     files = cache["files"]
     seen = set()
 
     # session id -> {"ledger", "msgs"} merged across main + subagent files
     sessions = {}
+
+    def merge(sid, is_main, hit):
+        s = sessions.setdefault(sid, {"ledger": None, "msgs": {}})
+        if is_main and hit["ledger"] is not None:
+            s["ledger"] = hit["ledger"]
+        s["msgs"].update(hit["msgs"])
+
     for slug in os.listdir(projects):
         # The repo's own folder and its Claude worktrees' folders.
         if not (slug == prefix or slug.startswith(prefix + "--claude-worktrees-")):
@@ -154,19 +172,25 @@ def main():
                     st = os.stat(path)
                 except OSError:
                     continue
-                key = f"{st.st_size}:{int(st.st_mtime)}"
+                # A price update re-reads every log still on disk.
+                key = f"{st.st_size}:{int(st.st_mtime)}:{PRICES_UPDATED}"
                 seen.add(path)
                 hit = files.get(path)
                 if not hit or hit.get("k") != key:
-                    hit = {"k": key, **scan_file(path)}
+                    hit = {"k": key, "sid": sid, "main": is_main, **scan_file(path)}
                     files[path] = hit
-                s = sessions.setdefault(sid, {"ledger": None, "msgs": {}})
-                if is_main and hit["ledger"] is not None:
-                    s["ledger"] = hit["ledger"]
-                s["msgs"].update(hit["msgs"])
+                merge(sid, is_main, hit)
 
-    for stale in set(files) - seen:
-        del files[stale]
+    # Claude Code deletes old logs (cleanupPeriodDays, 30 days by default).
+    # A session this scan has seen keeps counting after its log is gone, so
+    # the total stays a total to date rather than a rolling month.
+    for path, hit in files.items():
+        if path in seen or hit["sid"] == exclude:
+            continue
+        if not hit.get("gone"):
+            hit.update(gone=True, msgs=fold(hit["msgs"]))
+        merge(hit["sid"], hit["main"], hit)
+
     tmp = cache_path + ".tmp"
     os.makedirs(os.path.dirname(cache_path), exist_ok=True)
     with open(tmp, "w") as fh:

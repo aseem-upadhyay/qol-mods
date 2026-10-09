@@ -2,7 +2,9 @@
 
 # repo-spend
 
-**What your Claude Code sessions cost, per repo, live, right above the prompt.**
+**How much have you burned on this repo? How much value are you getting from your plan?**
+
+What your Claude Code sessions cost, per repo, live, right above the prompt.
 
 [![Claude Code plugin](https://img.shields.io/badge/Claude%20Code-plugin-D97757?style=flat-square)](#install)
 [![macOS | Linux](https://img.shields.io/badge/platform-macOS%20%7C%20Linux-555?style=flat-square)](#requirements)
@@ -15,7 +17,8 @@
 
 ## Features
 
-- 💰 **Lifetime cost per repo.** Every session ever run in the repo, its Claude worktrees included, plus today and the last 7 days.
+- 💰 **A running total per repo.** Every session in the repo, its Claude worktrees included, plus today and the last 7 days. It keeps counting even after Claude Code clears out old logs.
+- 💳 **Works for API keys and subscriptions.** On an API key it shows the credits you've burned. On Pro or Max it shows what your usage would have cost at API prices, so you can see how much value you're getting from your plan.
 - 📈 **Live burn rate.** This session's cost and its pace over the last 30 minutes, with a sparkline that turns amber and then red as the pace climbs.
 - 📐 **Fits any width.** At narrower widths it drops the least important details rather than cutting the line off.
 - 🔒 **Local only.** It reads the session logs Claude Code already keeps on your machine and sends nothing anywhere.
@@ -44,7 +47,7 @@ claude plugin uninstall repo-spend@qol-mods
 | Part | What it shows |
 | --- | --- |
 | **◆ repo** | The repo the session runs in. A worktree session counts toward its main checkout |
-| **to date** | Every session in the repo so far, plus this one. **≈** means some of it is estimated (see [accuracy](#accuracy)) |
+| **to date** | Every session in the repo so far, plus this one, including sessions whose logs Claude Code has since deleted (see [history](#how-far-back-it-goes)). **≈** means some of it is estimated (see [accuracy](#accuracy)) |
 | **today · last 7d** | The same total, for today (local time) and for the last 7 days |
 | **this session** | The live session's cost, the same figure `/cost` shows, subagents included |
 | **sparkline** | This session's spend in ten 3-minute slices covering the last 30 minutes. A full bar is at least $0.75, so small spends stay small. Drawn as SVG bars on desktop and block characters in the terminal |
@@ -81,13 +84,19 @@ The estimates use the list prices in [`hooks/scan.py`](hooks/scan.py) (`PRICES`,
 
 A model missing from the price table counts as $0. The bar flags it in amber (`+` after the total, and `no price: <model>` when there's room), so you know the total is too low.
 
-Sessions on a subscription show what the same usage would cost at API list prices, not what you paid.
+Sessions on a subscription show what the same usage would cost at API list prices, not what you paid. That's the point: it's the value you got from your plan.
+
+### How far back it goes
+
+Claude Code deletes its session logs after 30 days by default (the `cleanupPeriodDays` setting). repo-spend remembers what every session cost once it has seen it, so from the day you install it the total keeps growing instead of rolling off after a month.
+
+Sessions deleted before you installed it can't be counted. To keep more history from now on, raise the setting in `~/.claude/settings.json`, for example `"cleanupPeriodDays": 365`.
 
 ## Privacy
 
 - Nothing leaves your machine. There are no network calls.
 - It reads only your local session logs in `~/.claude/projects` (or `$CLAUDE_CONFIG_DIR/projects`).
-- It writes one cache file per repo under `~/.cache/claude-repo-spend/`. Delete it any time; the next scan rebuilds it.
+- It writes one cache file per repo under `~/.cache/claude-repo-spend/`. It holds cost figures and timestamps, never your conversations, and it's what remembers sessions after Claude Code deletes their logs. Deleting it resets the total to what's still on disk.
 
 <details>
 <summary><b>Development</b></summary>
