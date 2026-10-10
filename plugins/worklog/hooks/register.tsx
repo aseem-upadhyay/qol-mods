@@ -413,6 +413,7 @@ export const register: Register = (on, options) => {
         dayStartsAt: ctx.settings.dayStartsAt,
         idleGapMin: ctx.settings.idleGapMin,
         maxUnattendedMin: ctx.settings.maxUnattendedMin,
+        parallelSplit: ctx.settings.parallelSplit,
         open,
         allOpen,
       },

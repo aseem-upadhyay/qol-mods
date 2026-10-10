@@ -1,6 +1,6 @@
 {
   "name": "worklog",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "What you worked on, day by day, from your Claude Code sessions and git: /standup for the last work day or the week, /worklog for any day or a week's timesheet, by repo, PR and branch with the time spent",
   "author": { "name": "Aseem Upadhyay", "url": "https://github.com/aseem-upadhyay" },
   "homepage": "https://github.com/aseem-upadhyay/qol-mods/tree/main/plugins/worklog",
@@ -26,6 +26,13 @@
       "title": "Claude working alone (minutes)",
       "description": "How long after your last message Claude's work still counts as your time",
       "default": 30
+    },
+    "parallelSplit": {
+      "type": "string",
+      "title": "Parallel sessions share a minute",
+      "description": "focus: the session you last typed in gets three shares of a minute it shares, each other session one. even: an equal share each",
+      "options": ["focus", "even"],
+      "default": "focus"
     },
     "dayStartsAt": {
       "type": "string",

@@ -6,7 +6,7 @@ Usage:
           [--home DIR] [--idle-gap MIN] [--lead-in MIN] [--max-unattended MIN]
           [--day-start HH:MM] [--exclude PATH,PATH] [--include-non-repo]
           [--temp PATH,PATH] [--extra-roots PATH,PATH] [--github on|off] [--gh PATH]
-          [--archive DIR]
+          [--archive DIR] [--split focus|even]
 
 A DAY is a date (2026-10-09) or a whole number of days from today (-1 for
 yesterday, 0 for today), today being the day `--day-start` says it is now.
@@ -42,7 +42,7 @@ import argparse, bisect, contextlib, datetime, fcntl, glob, json, os, re, sys, t
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import ghsearch, gitlog  # noqa: E402
 from facts import facts_of, folders, pick_asks, relative  # noqa: E402
-from timeline import AGENT, HUMAN, Rules, allocate, attended  # noqa: E402
+from timeline import AGENT, HUMAN, Rules, allocate, attended, focus_from  # noqa: E402
 
 PARSER_VERSION = 6
 # Raise PARSER_VERSION whenever what read_file keeps changes: the cache is keyed by it.
@@ -389,6 +389,9 @@ def main(argv=None):
     ap.add_argument("--gh", default="", help="the gh to run; found on PATH when empty")
     # Where finished days are kept for good (SPEC.md §7.2); none when empty.
     ap.add_argument("--archive", default="")
+    # How parallel sessions share a minute (SPEC.md §6.3): mostly to the one
+    # the user last acted in, or evenly.
+    ap.add_argument("--split", choices=("focus", "even"), default="focus")
     # Today's date, for tests; the clock's otherwise.
     ap.add_argument("--today", default="")
     args = ap.parse_args(argv)
@@ -567,6 +570,12 @@ def main(argv=None):
         for m, key in where:
             active_by.setdefault(key, set()).add(m)
             mine_active.setdefault(key + (sid,), set()).add(m)
+    # Where the user was, minute by minute: the stream of their latest own
+    # event (a prompt, an answer, a commit by hand), for sharing a minute.
+    focus = None
+    if args.split == "focus":
+        focus = focus_from([(m, place_in(sid, m)) for sid, act in activity.items() if sid in placed
+                            for m, flags in act.items() if flags & HUMAN])
     infos = {}
 
     # 4. Facts go where their session was at the time, by day.
@@ -628,7 +637,7 @@ def main(argv=None):
         day_seen = {k: within(v) for k, v in seen_by.items()}
         day_seen = {k: v for k, v in day_seen.items() if v}
         day_alone = {k: within(v) - day_seen.get(k, set()) for k, v in alone_by.items()}
-        shares, union = allocate(day_seen)
+        shares, union = allocate(day_seen, focus)
         minutes = whole(shares, len(union))
         all_alone = set().union(*day_alone.values()) - union if day_alone else set()
         hours = [0] * 24

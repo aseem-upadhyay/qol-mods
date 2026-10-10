@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | Phases 1 and 2 built (0.2.0); see Appendices A and B for what changed on the way |
+| Status | Phases 1–3 built (0.3.0); see Appendices A–C for what changed on the way |
 | Author | Aseem Upadhyay, drafted with Claude |
 | Date | 2026-10-10 |
 | Lives in | `plugins/worklog/` in qol-mods |
@@ -161,9 +161,8 @@ Spans are worked out per **session**, across its branch switches, and each minut
 The prototype's 8.2 h vs 5.4 h means this is the core of the plugin.
 
 - The **day total** is the union of all streams' spans: the user's wall-clock active time.
-- Each minute of the union is split evenly among the streams active in that minute. Three parallel sessions in one minute each get ⅓ of it.
+- Each minute of the union is split among the streams attended in it. The stream of the user's latest own event at or before that minute (a prompt, an answer, a commit or switch by hand) gets three shares and each other stream one, when it is one of the minute's; otherwise the minute is split evenly (Appendix C). `parallelSplit: even` splits every minute evenly: three parallel sessions in one minute each get ⅓ of it.
 - Per-group times therefore always sum to the day total.
-- A finer weighting (more weight to the stream with the human event in that minute) is a phase 2 option. Start with the even split, which is easy to explain and test.
 
 Each group also keeps its raw, unallocated span time ("2h 40m, 1h 55m after overlaps"), shown on hover/expand. That way a user who wants "time the branch was open" still has it.
 
@@ -305,6 +304,7 @@ worklog shows; it never sends. The only ways out are Copy (to the clipboard) and
 | `idleGapMin` | 15 | Gap that ends a span |
 | `leadInMin` | 5 | Time added before a span's first human event |
 | `maxUnattendedMin` | 30 | Agent-only time counted after the last human event |
+| `parallelSplit` | `focus` | How a shared minute is split: `focus` (three shares to the stream last acted in) or `even` |
 | `dayStartsAt` | `"04:00"` | When a day rolls over |
 | `workDays` | `"mon-fri"` | For "last working day" |
 | `weekStartsOn` | `monday` | Week tab and `/standup week` |
@@ -338,13 +338,14 @@ worklog shows; it never sends. The only ways out are Copy (to the clipboard) and
 - Week tab, rounding, Copy (Markdown) / Copy CSV / Save CSV; `/standup week`, `/worklog week`, and `last week` for each.
 - Archive of settled days.
 
-**Phase 3 (0.3.0): polish**
+**Phase 3 (0.3.0): polish** (done)
 
-- Weighted allocation (§6.3).
+- Weighted allocation (§6.3, Appendix C), with `parallelSplit` to keep the even split.
+- Days with a clock change (§12).
 
 ## 12. Testing
 
-- **Timeline**: a gap of exactly `idleGapMin`; lead-in at the start of the day straddling `dayStartsAt`; a 2-hour autonomous run capped at 30 minutes; three overlapping streams summing to the union; daylight-saving days.
+- **Timeline**: a gap of exactly `idleGapMin`; lead-in at the start of the day straddling `dayStartsAt`; a 2-hour autonomous run capped at 30 minutes; three overlapping streams summing to the union, evenly and with one in focus; daylight-saving days (23 and 25 hours, in America/New_York).
 - **Scan**: fixture transcripts for a subfolder `cwd`, a deleted worktree, a scratchpad `cwd`, one session with two PRs, a branch switch mid-session, a `-p` run.
 - **Timesheet**: rounded cells sum to rounded day totals; CSV quoting of titles with commas and quotes.
 - **Standup**: Monday picks Friday; empty day says so; open PRs listed once.
@@ -444,4 +445,18 @@ A day is archived once it is two days old (`--archive`, `--today` for tests). Re
 - A day with only reviews counts as a day with work, so a standup shows it.
 - The pane's Day and Week views are two buttons (**1**, **2**), the active one in the accent color.
 - `$.state` survives a reload, so drawings read fields new in 0.2.0 (`reviews`, `openPrs`, `handCommits`) as possibly missing, for days kept from 0.1.0.
+
+## Appendix C. What changed in phase 3
+
+### C.1 A shared minute goes mostly where the user is
+
+The even split gave a session running a long task on its own as much of a shared minute as the one the user was typing in. Now the user's own events (prompts, answers, interrupts, commits and switches by hand) say where they are: from each one until the next, that stream is in focus (`timeline.focus_from`). A minute shared with the stream in focus gives it three shares and each other stream one: of two streams, ¾ and ¼; of three, 60% and 20% each. A minute whose streams don't include the one in focus, as when the user last typed in a session that has since stopped, is split evenly, as before.
+
+Three, not all of it: the user also reads the other session's output and answers it, and an all-or-nothing split would make a branch's time jump with every prompt. One shared constant (`FOCUS_WEIGHT`), not a setting: `parallelSplit` only picks focus or even.
+
+On the author's week it moved a minute or two a day. Per-session attendance (A.1) and the unattended cap already leave little overlap there. It matters on days with several sessions at work at once; the tests have one: a session prompted every five minutes beside one prompted once and left to run share 37 minutes as 26 and 11, where the even split gives 18 and 19.
+
+### C.2 Days with a clock change
+
+`day_bounds` works each day out from local midnight plus `dayStartsAt`, so a day with a clock change is 23 or 25 hours long, and with a 04:00 start the long or short day is the one before the change (the clocks move at 02:00). Tested with America/New_York's changes on 8 March and 1 November 2026.
 

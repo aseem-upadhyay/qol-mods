@@ -36,6 +36,8 @@ test('settings out of range fall back to the defaults', async () => {
   const s = settingsFrom({ idleGapMin: 0, leadInMin: -3, dayStartsAt: '25:00', workDays: 'never', includeNonRepo: 'yes' })
   expect(s).toEqual(DEFAULTS)
   expect(settingsFrom({ dayStartsAt: ' 5:30 ', idleGapMin: 20 })).toEqual({ ...DEFAULTS, dayStartsAt: '5:30', idleGapMin: 20 })
+  expect(settingsFrom({ parallelSplit: 'random', roundTo: 7 })).toEqual(DEFAULTS)
+  expect(settingsFrom({ parallelSplit: 'even' }).parallelSplit).toBe('even')
 })
 
 test('a day reads as repos, then each branch: its headline and one line of counts', async () => {

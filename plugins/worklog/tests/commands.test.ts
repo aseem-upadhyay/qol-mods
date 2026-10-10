@@ -23,6 +23,7 @@ for (const surface of SURFACES) {
       expect(argv).not.toContain('--exclude')
       expect(argv).not.toContain('--include-non-repo')
       expect(argv).not.toContain('--no-asks')
+      expect(argv).not.toContain('--split')
       expect(reply.text).toMatch(/^Standup since Fri 9 Oct\n\nFri 9 Oct · 5h 18m\n/)
       expect(reply.text).toContain('Today so far (Mon 12 Oct) · 45m')
       expect(reply.text).toMatch(/\/standup full adds what you asked, committed and changed; \/standup copy copies it; \/worklog shows any day\.$/)
@@ -30,7 +31,7 @@ for (const surface of SURFACES) {
 
     test(
       'settings reach the scan',
-      { options: { idleGapMin: 20, maxUnattendedMin: 10, dayStartsAt: '05:30', excludeProjects: '/work/client', includeNonRepo: true, includePrompts: false } },
+      { options: { idleGapMin: 20, maxUnattendedMin: 10, dayStartsAt: '05:30', excludeProjects: '/work/client', includeNonRepo: true, includePrompts: false, parallelSplit: 'even' } },
       async ($, on) => {
         const { run, seen } = await boot($, on, surface)
         await run('standup')
@@ -39,6 +40,7 @@ for (const surface of SURFACES) {
         expect(argv).toContain('--exclude /work/client')
         expect(argv).toContain('--include-non-repo')
         expect(argv).toContain('--no-asks')
+        expect(argv).toContain('--split even')
       },
     )
 
