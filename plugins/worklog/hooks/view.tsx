@@ -448,11 +448,13 @@ export function repoList(look: Look, day: Day, opts: ListOptions): RenderElement
   )
 }
 
-export function footnote(look: Look, idleGapMin: number, maxUnattendedMin: number): RenderElement {
+export function footnote(look: Look, idleGapMin: number, maxUnattendedMin: number, split: 'focus' | 'even'): RenderElement {
   const { Text } = look.els
+  const shared =
+    split === 'focus' ? 'a minute parallel sessions share goes mostly to the one you last typed in' : 'parallel sessions share each minute evenly'
   return (
     <Text dimColor>
-      {`Estimated from your Claude Code sessions and git. A ${idleGapMin}-minute gap ends a stretch of work, Claude working alone counts for ${maxUnattendedMin} minutes after your last message, and parallel sessions share the time.`}
+      {`Estimated from your Claude Code sessions and git. A ${idleGapMin}-minute gap ends a stretch of work, Claude working alone counts for ${maxUnattendedMin} minutes after your last message, and ${shared}.`}
     </Text>
   )
 }

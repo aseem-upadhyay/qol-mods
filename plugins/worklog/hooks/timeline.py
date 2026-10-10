@@ -4,6 +4,7 @@ the split of parallel minutes between streams.
 Everything here is pure and works in whole minutes: a minute is an epoch
 minute (epoch seconds // 60), an activity map is {minute: flags}.
 """
+import bisect
 
 AGENT = 1
 HUMAN = 2
@@ -58,16 +59,56 @@ def attended(activity, rules):
     return seen, alone - seen
 
 
-def allocate(streams):
-    """Splits each minute evenly between the streams attended in it (§6.3).
+# Shares of a shared minute the stream the user last acted in gets, to each other's one.
+FOCUS_WEIGHT = 3
 
-    `streams` is {key: set of minutes}. Returns ({key: minutes, as a float},
-    the set of minutes any stream was attended in). The shares add up to the
-    union, so parallel sessions never count twice.
+
+def allocate(streams, focus=None, weight=FOCUS_WEIGHT):
+    """Splits each minute between the streams attended in it (§6.3).
+
+    `streams` is {key: set of minutes}. With `focus`, a function from a
+    minute to the stream the user last acted in by then (or None), that
+    stream gets `weight` shares of a minute it shares and every other stream
+    one: the user is mostly where they last typed. Without it, or when the
+    stream in focus isn't one of the minute's, the minute is split evenly.
+
+    Returns ({key: minutes, as a float}, the set of minutes any stream was
+    attended in). The shares add up to the union either way, so parallel
+    sessions never count twice.
     """
     count = {}
     for minutes in streams.values():
         for m in minutes:
             count[m] = count.get(m, 0) + 1
-    shares = {k: sum(1.0 / count[m] for m in minutes) for k, minutes in streams.items()}
+    # The stream in focus in each shared minute, where it is one of the minute's.
+    lead = {}
+    if focus is not None:
+        for m, n in count.items():
+            if n > 1:
+                k = focus(m)
+                if k is not None and m in streams.get(k, ()):
+                    lead[m] = k
+    shares = {}
+    for k, minutes in streams.items():
+        total = 0.0
+        for m in minutes:
+            n = count[m]
+            if m in lead:
+                total += (weight if lead[m] == k else 1) / (weight + n - 1)
+            else:
+                total += 1.0 / n
+        shares[k] = total
     return shares, set(count)
+
+
+def focus_from(events):
+    """A focus function for allocate from the user's own events: [(minute,
+    stream)]. At each minute, the stream of the latest event at or before it."""
+    events = sorted(events, key=lambda e: e[0])
+    stamps = [m for m, _ in events]
+
+    def focus(m):
+        i = bisect.bisect_right(stamps, m) - 1
+        return events[i][1] if i >= 0 else None
+
+    return focus

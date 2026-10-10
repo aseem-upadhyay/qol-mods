@@ -31,6 +31,7 @@ export type PaneContext = {
   dayStartsAt: string
   idleGapMin: number
   maxUnattendedMin: number
+  parallelSplit: 'focus' | 'even'
   /** Branches opened or closed by hand, by groupKey; the rest follow allOpen. */
   open: Record<string, boolean>
   allOpen: boolean
@@ -78,7 +79,7 @@ export function drawPane(
     <Box flexDirection="column" paddingX={1} rowGap={1}>
       {tabs}
       {children}
-      {footnote(look, ctx.idleGapMin, ctx.maxUnattendedMin)}
+      {footnote(look, ctx.idleGapMin, ctx.maxUnattendedMin, ctx.parallelSplit)}
     </Box>
   )
 

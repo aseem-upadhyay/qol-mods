@@ -1,5 +1,5 @@
 """Tests for hooks/scan.py, end to end. Run: python3 -m unittest discover -s tests"""
-import datetime, json, os, re, shutil, subprocess, sys, tempfile, unittest
+import datetime, json, os, re, shutil, subprocess, sys, tempfile, time, unittest
 
 SCAN = os.path.join(os.path.dirname(__file__), "..", "hooks", "scan.py")
 # Days start at 04:00 local: pin the zone so they fall the same everywhere.
@@ -298,6 +298,21 @@ class ScanTest(unittest.TestCase):
         self.assertEqual(g["pr"]["title"], "Fix login")
         self.assertEqual(self.group(self.day("--no-asks"), "app", "feat")["asks"], [])
 
+    def test_a_shared_minute_goes_mostly_to_the_session_typed_in(self):
+        # api is prompted once and left to work; app is prompted every five minutes.
+        self.prompt("s2", at("09:59"), self.api, "main")
+        for minute in range(5, 31, 5):
+            self.work("s2", at(f"10:{minute:02d}"), self.api, "main")
+        for minute in range(0, 31, 5):
+            self.prompt("s1", at(f"10:{minute:02d}"), self.app, "feat")
+        day = self.day()
+        app, api = self.group(day, "app", "feat"), self.group(day, "api", "main")
+        self.assertEqual(day["totalMin"], 37)
+        self.assertEqual((app["minutes"], api["minutes"]), (26, 11))
+        even = self.day("--split", "even")
+        app, api = self.group(even, "app", "feat"), self.group(even, "api", "main")
+        self.assertEqual(sorted((app["minutes"], api["minutes"])), [18, 19])
+
     # -- git (SPEC.md §5.2)
 
     def test_a_commit_made_outside_claude_counts_as_the_users_time(self):
@@ -399,6 +414,38 @@ class ScanTest(unittest.TestCase):
         # Hours count from 04:00: 09:55-09:59 in the sixth, 10:00 in the seventh.
         self.assertEqual((hours[5], hours[6]), (5, 1))
         self.assertEqual(sum(hours), 6)
+
+
+class DayBoundsTest(unittest.TestCase):
+    """Days start at day-start local time, so a day with a clock change is 23 or 25 hours."""
+
+    def setUp(self):
+        self.tz = os.environ.get("TZ")
+        os.environ["TZ"] = "America/New_York"
+        time.tzset()
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "hooks"))
+        import scan
+        self.day_bounds = scan.day_bounds
+
+    def tearDown(self):
+        if self.tz is None:
+            os.environ.pop("TZ", None)
+        else:
+            os.environ["TZ"] = self.tz
+        time.tzset()
+
+    def lengths(self, first, last, day_start):
+        bounds = self.day_bounds(datetime.date.fromisoformat(first), datetime.date.fromisoformat(last), day_start)
+        return [(date, end - start) for date, start, end in bounds]
+
+    def test_the_clocks_going_back_make_a_25_hour_day(self):
+        # They go back at 02:00 on 1 November 2026: from 04:00 that's in the day of 31 October.
+        self.assertEqual(self.lengths("2026-10-31", "2026-11-01", 240), [("2026-10-31", 1500), ("2026-11-01", 1440)])
+        self.assertEqual(self.lengths("2026-11-01", "2026-11-01", 0), [("2026-11-01", 1500)])
+
+    def test_the_clocks_going_forward_make_a_23_hour_day(self):
+        self.assertEqual(self.lengths("2026-03-07", "2026-03-08", 240), [("2026-03-07", 1380), ("2026-03-08", 1440)])
+        self.assertEqual(self.lengths("2026-03-08", "2026-03-08", 0), [("2026-03-08", 1380)])
 
 
 if __name__ == "__main__":

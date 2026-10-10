@@ -38,7 +38,7 @@ Today so far (Mon 12 Oct) · 45m
 - 🔀 **By PR, then branch.** PRs come from your sessions' own logs, and with `gh` signed in, GitHub names the rest by branch and says which are open, merged or drafts.
 - 🌿 **Git too.** Commits and branch switches you make by hand, outside Claude, count as your work. Read from git's own records on disk; no git command runs.
 - 🗓️ **A week's timesheet.** A row per branch, a column per day, rounded to 15 minutes with each day still adding up. Copy it as a table or CSV, or save the CSV.
-- ⏱️ **Time that adds up.** Parallel sessions share the minutes they overlap, so a day's groups add up to the time you were actually at it.
+- ⏱️ **Time that adds up.** A minute two sessions share goes mostly to the one you were typing in, so a day's branches add up to the time you were actually at it, and each gets the share you gave it.
 - 🤖 **Your time, not Claude's.** Claude working alone counts for 30 minutes after your last message. Anything longer is shown apart, not added to your day.
 - 🌙 **Late nights stay on the right day.** A day runs 04:00 to 04:00 by default.
 - 🎨 **At home on both.** In the desktop app the day is split by repo in one bar and each branch gets a timeline of its stretches (hover for times); in the terminal the same is drawn in theme colors with block characters, beside each name or, in a docked pane, under it.
@@ -79,7 +79,7 @@ Each session's log has a timestamp on everything that happened. From those:
 2. **You or Claude.** Your messages, slash commands, interrupts, messages queued while Claude worked and permissions you answered are you. The rest is Claude. Claude's work counts for 30 minutes after your last message; past that it's "Claude alone", shown but not in your total. Headless runs (`claude -p`, the SDK) are always Claude alone.
 3. **Repo and branch.** Each minute goes to the repo and branch its session was on. A session that switches branch moves its time with it.
 4. **Outside Claude.** A commit or a branch switch in git with no session at work in that repo around it counts like a message of yours: 5 minutes before it, joined to others within 15. One a session made counts as Claude's.
-5. **Overlaps.** A minute two sessions share is split between them, so the day's total is wall-clock time.
+5. **Overlaps.** A minute several sessions share is split between them, so the day's total is wall-clock time. The session you last typed in (or answered, or committed in by hand) gets three shares of it and each other one share: running a long task in one session while you work in another puts most of the time where you were. Set **Parallel sessions share a minute** to even for equal shares.
 
 All of these are settings. Work in folders outside a git repo, and in temp folders, is left out unless you turn on **Count work outside repos**.
 
@@ -114,6 +114,7 @@ Open `/config` and find worklog, or set them under `pluginConfigs.worklog.option
 | Idle gap | 15 min | A gap this long ends a stretch of work |
 | Lead-in | 5 min | Added before a stretch that starts with your message |
 | Claude working alone | 30 min | How long after your last message Claude's work still counts |
+| Parallel sessions share a minute | focus | focus: the session you last typed in gets three shares, each other one; even: an equal share each |
 | Day starts at | 04:00 | Work before this counts toward the day before |
 | Work days | mon–fri | `/standup` reports since the last one |
 | Folders to leave out | none | Never read, such as client work |
@@ -135,7 +136,3 @@ These are estimates from activity, not a timer. Time spent reading code in your 
 - `python3` 3.9 or later on `PATH`
 - macOS or Linux
 - Optional: [`gh`](https://cli.github.com), signed in, for PR titles, states, reviews and open PRs
-
-## Coming next
-
-Weighting a shared minute toward the session you were typing in. See [SPEC.md](SPEC.md).

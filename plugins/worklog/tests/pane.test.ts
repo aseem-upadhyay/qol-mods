@@ -14,6 +14,7 @@ for (const surface of SURFACES) {
       expect(await ui.find({ text: /^45m/ })).toBeDefined()
       expect(await ui.find({ text: /worklog/ })).toBeDefined()
       expect(await ui.find({ text: 'Standup and worklog plugin' })).toBeDefined()
+      expect(await ui.find({ text: /a minute parallel sessions share goes mostly to the one you last typed in\.$/ })).toBeDefined()
       expect(await ui.find({ key: 'next' })).toBeUndefined()
       expect(await ui.find({ key: 'today' })).toBeUndefined()
     })

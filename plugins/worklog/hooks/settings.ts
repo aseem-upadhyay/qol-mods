@@ -7,6 +7,7 @@ export type Settings = {
   idleGapMin: number
   leadInMin: number
   maxUnattendedMin: number
+  parallelSplit: 'focus' | 'even'
   dayStartsAt: string
   workDays: string
   excludeProjects: string
@@ -23,6 +24,7 @@ export const DEFAULTS: Settings = {
   idleGapMin: 15,
   leadInMin: 5,
   maxUnattendedMin: 30,
+  parallelSplit: 'focus',
   dayStartsAt: '04:00',
   workDays: 'mon,tue,wed,thu,fri',
   excludeProjects: '',
@@ -49,6 +51,7 @@ export function settingsFrom(options: Readonly<Record<string, unknown>>): Settin
     idleGapMin: pick('idleGapMin', v => WHOLE(v) && (v as number) > 0),
     leadInMin: pick('leadInMin', WHOLE),
     maxUnattendedMin: pick('maxUnattendedMin', WHOLE),
+    parallelSplit: pick('parallelSplit', v => v === 'focus' || v === 'even'),
     dayStartsAt: pick('dayStartsAt', v => typeof v === 'string' && /^([01]?\d|2[0-3]):[0-5]\d$/.test(v.trim())).trim(),
     workDays: pick('workDays', v => typeof v === 'string' && workDaysFrom(v).size > 0),
     excludeProjects: pick('excludeProjects', v => typeof v === 'string'),
@@ -130,6 +133,7 @@ export function argvFor(root: string, paths: Paths, settings: Settings, from: st
     '--archive',
     paths.archive,
   ]
+  if (settings.parallelSplit === 'even') argv.push('--split', 'even')
   if (!settings.useGitHub) argv.push('--github', 'off')
   if (settings.extraRoots.trim()) argv.push('--extra-roots', settings.extraRoots)
   if (settings.excludeProjects.trim()) argv.push('--exclude', settings.excludeProjects)
