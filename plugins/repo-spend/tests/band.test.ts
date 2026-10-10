@@ -19,6 +19,7 @@ const HISTORY: History = {
   week: 50,
   since: START - 58 * DAY,
   unpriced: [],
+  live: 1,
 }
 
 const ran = (exitCode: number, stdout: string, stderr = '') => ({
@@ -39,7 +40,7 @@ type Setup = {
 async function boot($: Engine, on: On, surface: (typeof SURFACES)[number], setup: Setup) {
   const clock = mock.clock(on, { now: START })
   mock.env(on, { HOME: '/home/me' })
-  const seen: { scan: readonly string[]; sweep: readonly string[] } = { scan: [], sweep: [] }
+  const seen: { scan: readonly string[]; runs: (readonly string[])[] } = { scan: [], runs: [] }
 
   // Beneath the plugin: another mod's band, or the engine's own drawing.
   on('ui.render', { component: 'AbovePrompt' }, async (below, e) => {
@@ -54,10 +55,7 @@ async function boot($: Engine, on: On, surface: (typeof SURFACES)[number], setup
         ? ran(0, '/work/my.app/.git\n')
         : ran(128, '', 'fatal: not a git repository')
     }
-    if (e.argv.includes('--sweep')) {
-      seen.sweep = e.argv
-      return ran(0, '{"repos": 1, "failed": []}')
-    }
+    seen.runs.push(e.argv)
     seen.scan = e.argv
     if (typeof setup.scan === 'string') return ran(127, '', setup.scan)
     // As scan.py does, the history leaves out the session named last.
@@ -130,22 +128,31 @@ for (const surface of SURFACES) {
     test('scans the main checkout, skipping the live session', async ($, on) => {
       const { seen } = await boot($, on, surface, { scan: HISTORY })
       expect(seen.scan.slice(0, 2)).toEqual(['/usr/bin/env', 'python3'])
-      expect(seen.scan[3]).toBe('/home/me/.claude/projects')
-      expect(seen.scan[4]).toBe('-work-my-app')
-      expect(seen.scan[5]).toBe('/home/me/.cache/claude-repo-spend/-work-my-app.json')
-      expect(seen.scan[6]).toBe('/home/me/.local/share/claude-repo-spend/-work-my-app.json')
-      expect(seen.scan[7]).toBe('live-session')
-    })
-
-    test('sweeps every repo into its archive after the first scan', async ($, on) => {
-      const { seen, clock } = await boot($, on, surface, { scan: HISTORY })
-      await clock.advance(0)
-      expect(seen.sweep.slice(3)).toEqual([
-        '--sweep',
+      expect(seen.scan.slice(3)).toEqual([
         '/home/me/.claude/projects',
+        '/work/my.app',
         '/home/me/.cache/claude-repo-spend',
         '/home/me/.local/share/claude-repo-spend',
+        'live-session',
       ])
+    })
+
+    test('runs no separate sweep: every scan reads every repo', async ($, on) => {
+      const { seen, clock } = await boot($, on, surface, { scan: HISTORY })
+      await clock.advance(7 * HOUR)
+      expect(seen.runs.some(argv => argv.includes('--sweep'))).toBe(false)
+    })
+
+    test("counts only this repo's share of the live session toward the repo", async ($, on) => {
+      // Half of the live session's work so far was in another repo.
+      const { spend, mount } = await boot($, on, surface, { scan: { ...HISTORY, live: 0.5 } })
+      await spend(4, HOUR - 1)
+      const ui = await mount(160)
+      expect(await ui.find({ text: '$1,002.00' })).toBeDefined()
+      expect(await ui.find({ text: '$6.00' })).toBeDefined()
+      expect(await ui.find({ text: '$52.00' })).toBeDefined()
+      // This session is still the whole session, as /cost shows it.
+      expect(await ui.find({ text: '$4.00' })).toBeDefined()
     })
 
     test('wide: totals on the left, the live session and its burn on the right', async ($, on) => {
