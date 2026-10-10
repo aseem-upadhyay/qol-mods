@@ -43,13 +43,14 @@ test('a day reads as repos, then each branch: its headline and one line of count
     'Fri 9 Oct · 5h 18m',
     '- qol-mods · 4h 16m',
     '  - #2 coach · 2h · A weekly coach',
-    '    - 13:53–16:47 · 3 commits · 7 files · 12 test runs · Claude alone 14m',
+    '    - 13:53–16:47 · PR merged · 3 commits · 7 files · 12 test runs · Claude alone 14m',
     '  - main · 2h 10m · README previews',
     '    - 12:16–13:54',
     '  - Also: tidy 6m',
     '- api · 1h 2m',
     '  - master · 1h 2m · Rate limit the search endpoint',
     '    - 10:00–12:00',
+    '- Reviewed: api #3 Their fix',
   ])
   expect(dayLines(empty('2026-10-10'), 'Sat 10 Oct')).toEqual(['Sat 10 Oct · nothing in your logs'])
 })
@@ -58,13 +59,13 @@ test('in full, each branch lists what was asked, its commits and where files cha
   const lines = dayLines(FRIDAY, 'Fri 9 Oct', true)
   expect(lines.slice(2, 15)).toEqual([
     '  - #2 coach · 2h · A weekly coach',
-    '    - 13:53–16:47 · 3 commits · 7 files · 12 test runs · Claude alone 14m',
+    '    - 13:53–16:47 · PR merged · 3 commits · 7 files · 12 test runs · Claude alone 14m',
     '    - Asked:',
     '      - “coach report is not available in the desktop app”',
     '      - “make the report cards in the desktop app”',
     '    - Commits:',
     '      - coach 0.2.0: the report as cards',
-    '      - coach 0.1.0: a weekly coach',
+    '      - coach 0.1.0: a weekly coach · outside Claude',
     '      - +1 more',
     '    - Changed:',
     '      - plugins/coach/hooks · 6 files',
@@ -100,13 +101,14 @@ test("the standup skips the empty weekend and adds today so far", async () => {
     'Standup since Fri 9 Oct',
     'Fri 9 Oct · 5h 18m',
     'Today so far (Mon 12 Oct) · 45m',
+    'Open PRs',
   ])
 })
 
 test('a standup with nothing to say says so', async () => {
   const found = { ...FOUND, days: FOUND.days.map(d => empty(d.date)) }
   expect(standupText({ ...standupFor(found, { kind: 'standup' }, WEEKDAYS), footer: null })).toBe(
-    'Standup since Fri 9 Oct\n\nNothing in your logs since Fri 9 Oct.',
+    'Standup since Fri 9 Oct\n\nNothing in your logs since Fri 9 Oct.\n\nOpen PRs\n- qol-mods #9 Add worklog',
   )
 })
 

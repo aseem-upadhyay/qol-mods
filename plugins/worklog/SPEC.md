@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | Phase 1 built (0.1.0); see Appendix A for what changed on the way |
+| Status | Phases 1 and 2 built (0.2.0); see Appendices A and B for what changed on the way |
 | Author | Aseem Upadhyay, drafted with Claude |
 | Date | 2026-10-10 |
 | Lives in | `plugins/worklog/` in qol-mods |
@@ -112,27 +112,28 @@ Nothing is drawn outside these two commands: no band above the prompt, no status
 
 ### 5.2 git (secondary, catches work done outside Claude)
 
-For every repo seen in the transcripts, plus any under `extraRoots`:
+For every repo seen in the transcripts, plus those under `extraRoots` (the folder itself, its children and grandchildren), git's reflogs are read from disk (`gitlog.py`, Appendix B.1). No git command runs.
 
-- `git log --all --author=<user.email> --since --until --format=%H%x00%aI%x00%s --source`: commits, with the ref each was reached from as a branch hint.
-- `git reflog --date=iso-strict` (HEAD): checkouts, which give branch switches and count as human events.
+- `.git/logs/refs/heads/<branch>`: each commit made on the branch on this machine, with its subject and minute ("commit", "commit (amend)", "commit (merge)", "cherry-pick"), and the branch's other moves (created, reset, rebased, pulled).
+- `.git/logs/HEAD` and each worktree's: the switches between branches ("checkout: moving from a to b").
 
-Commits and checkouts are human events. A commit with no Claude activity around it still yields a span (§6.2's lead-in), so an evening of hand-coding shows up, as a short span.
-
-The author email is the repo's `user.email`, plus anything in `authorEmails` (for people who commit with a work and a personal address).
+A commit or a switch is the user's own, outside Claude, when no session was at work in that repo within two minutes of it and no session ran a commit with the same subject within five. Those are human events: a lone commit yields a span of its own (§6.2's lead-in), so an evening of hand-coding shows up, as short spans. The rest are Claude's: their commits join the session's group, and they add no time.
 
 ### 5.3 GitHub via `gh` (optional enrichment)
 
-When `gh auth status` succeeds and `useGitHub` is on, one call per scan window:
+When `useGitHub` is on, one read-only GraphQL call per scan window (`ghsearch.py`), two searches in one request (`gh search prs --json` has no `headRefName`):
 
 ```
-gh search prs --author=@me --updated=">=<from>" --json number,title,state,url,repository,headRefName,isDraft
-gh search prs --reviewed-by=@me --updated=">=<from>" --json number,title,url,repository
+gh api graphql -f query=… -f authored="is:pr author:@me updated:>=<from>" -f reviewed="is:pr reviewed-by:@me -author:@me updated:>=<from>"
 ```
 
-This gives titles and states for `pr-link` PRs, and maps branches Claude never opened a PR for (by `headRefName`). Reviews become "Reviewed #123" lines in the standup with no time attached, unless there's matching activity on that branch.
+It gives each PR's number, title, state, draft flag, head branch and repo, and for reviewed PRs the user's own reviews with their times.
 
-Results are cached for 10 minutes. Failure or no `gh` means groups fall back to branch names. The standup never waits on the network for more than 5 s.
+- `pr-link` PRs get GitHub's title and state. A branch with no link gets its PR by `headRefName` in the repo whose `origin` it is (never a default branch); with several, the latest.
+- Each review goes on the day it was submitted, as a "Reviewed" line with no time attached.
+- Open PRs are listed at the end of the standup.
+
+Results are cached in the scan cache for 10 minutes; a failed call falls back to the last answer, however old. No `gh`, signed out or offline: PRs keep what the transcripts say and the rest is left out. `gh` is looked for on PATH, then in Homebrew's and the usual places, as an app started from the dock may not have Homebrew on its PATH. The call never waits more than 5 s.
 
 ### 5.4 Resolving a record to a repo
 
@@ -191,22 +192,33 @@ plugins/worklog/
   SPEC.md
   hooks/
     hooks.json            { "modules": ["./register.tsx"] }
-    register.tsx          commands, pane wiring, scan scheduling, copy/save
-    standup.ts            builds the standup text from a day summary
-    pane.tsx              the Day and Week views
-    timesheet.ts          grid, rounding, Markdown and CSV
-    scan.py               transcripts → events → per-day summaries (JSON out)
-    gitlog.py             commits, reflog, repo resolution
+    register.tsx          commands, scans, pane and row drawing, copy/save: everything that touches $
+    pane.tsx              the pane's Day and Week views
+    view.tsx              how a day, a standup and a week look, on each surface
+    art.ts                the Svg pictures: repo share, timeline rows, hour axis, dots
+    standup.ts            the words: headlines, counts, details, the standup's text
+    labels.ts             a branch's label and headline, shared by the words and the timesheet
+    timesheet.ts          the week: rows, rounding, Markdown, text and CSV
+    days.ts               dates and durations
+    settings.ts           userConfig and scan.py's argv
+    scan.py               transcripts, git and GitHub → per-day summaries (JSON out), cache, archive
     timeline.py           spans, unattended cap, allocation (pure functions)
-  types/index.d.ts        $.state contract
+    facts.py              what a record says: asks, commits, PR titles, edits, tests
+    gitlog.py             commits and branch switches from the reflogs on disk
+    ghsearch.py           PR titles and states, reviews, open PRs through gh
+  types/index.d.ts        $.state contract and the scan's types
   tests/
-    test_timeline.py      spans, gaps, lead-in, cap, overlap split, day boundary
-    test_scan.py          fixture transcripts → expected groups
-    test_gitlog.py        against a throwaway repo made in the test
-    standup.test.ts
-    timesheet.test.ts     rounding sums, CSV escaping
-    pane.test.ts
-    fixtures/
+    test_timeline.py      spans, gaps, lead-in, cap, overlap split
+    test_facts.py         asks, commits from commands, here-documents, folders
+    test_gitlog.py        reflogs, repo discovery, the GitHub answer and its cache
+    test_scan.py          fixture transcripts and repos → expected days, end to end
+    standup.test.ts       the words
+    timesheet.test.ts     rounding sums, the three formats
+    commands.test.ts      /standup and /worklog, settings into argv
+    look.test.ts          rows and the pane drawn on both surfaces
+    pane.test.ts          the Day view's buttons
+    week.test.ts          the Week view, /standup week, copy and save
+    helpers.ts, fixtures.ts
 ```
 
 If the slug → repo logic ends up identical to repo-spend's, move it to `shared/` and copy it in with `scripts/sync-shared.py`, as `pricing.py` is.
@@ -296,19 +308,18 @@ worklog shows; it never sends. The only ways out are Copy (to the clipboard) and
 | `dayStartsAt` | `"04:00"` | When a day rolls over |
 | `workDays` | `"mon-fri"` | For "last working day" |
 | `weekStartsOn` | `monday` | Week tab and `/standup week` |
-| `roundTo` | 15 | Timesheet rounding, minutes; 0 for none |
-| `useGitHub` | true | Use `gh` for PR titles, states and reviews when signed in |
-| `authorEmails` | `""` | Extra commit emails, comma-separated |
-| `extraRoots` | `""` | Folders to look for repos worked on without Claude |
+| `roundTo` | 15 | Timesheet rounding, minutes: 0 (none), 5, 6, 10, 15, 30 or 60 |
+| `useGitHub` | true | Use `gh` for PR titles, states, reviews and open PRs when signed in |
+| `extraRoots` | `""` | Folders to look for repos worked on without Claude (two levels down) |
 | `excludeProjects` | `""` | Folders never read (client work), same as coach's |
 | `includeNonRepo` | false | Count work outside any repo as "Other" |
 | `csvFolder` | `"~/Documents/worklog"` | Where Save CSV writes |
 
 ## 10. Privacy
 
-- Reads only local files plus, when `useGitHub` is on, GitHub through the user's own `gh` login, about PRs GitHub already has.
+- Reads only local files plus, when `useGitHub` is on, GitHub through the user's own `gh` login, about PRs GitHub already has. Nothing is written anywhere but the cache, the archive and a CSV the user saves.
 - No model calls, ever. The "what" lines are built from PR titles, commit subjects and session titles as they are.
-- The archive holds titles, branch names, commit subjects and times. No prompt text.
+- The archive (`$XDG_DATA_HOME/claude-worklog/days`, else `~/.local/share`) holds each settled day as shown: repos, branches, titles, commit subjects, folders, times and, with `includePrompts` on, the quoted prompts. With it off, none are kept, and any kept earlier are left out when read back.
 - `excludeProjects` folders are skipped before any file is opened.
 
 ## 11. Phases
@@ -320,12 +331,12 @@ worklog shows; it never sends. The only ways out are Copy (to the clipboard) and
 - `/worklog` Day tab.
 - Tests: timeline unit tests, fixture transcripts covering the four prototype findings (§3).
 
-**Phase 2 (0.2.0): the timesheet**
+**Phase 2 (0.2.0): the timesheet** (done)
 
-- `gitlog.py`: commits and reflog, `extraRoots`, `authorEmails`.
-- `gh` enrichment: titles, states, reviews, branch → PR for non-Claude PRs.
-- Week tab, rounding, Copy Markdown / Copy CSV / Save CSV.
-- Archive of frozen days.
+- `gitlog.py`: commits and branch switches from the reflogs on disk, `extraRoots`. (`authorEmails` was dropped: a reflog is this machine's alone.)
+- `ghsearch.py`: titles, states, reviews, open PRs, branch → PR for PRs Claude didn't open.
+- Week tab, rounding, Copy (Markdown) / Copy CSV / Save CSV; `/standup week`, `/worklog week`, and `last week` for each.
+- Archive of settled days.
 
 **Phase 3 (0.3.0): polish**
 
@@ -348,9 +359,9 @@ claude plugin validate . && claude plugin validate plugins/worklog && claude plu
 ## 13. Open questions
 
 1. **Name.** `worklog` (with `/standup` as a command) or `standup`? This plan uses `worklog` because the timesheet outlives the standup.
-2. **Does git-only work count toward the total?** A lone commit gives a 5-minute span. Is that right, or should git-only days show commits with no time?
+2. **Does git-only work count toward the total?** Built as counting: a lone commit or switch outside Claude gives a 6-minute span, close ones join. Revisit if it reads as too little or too much.
 3. **Default `idleGapMin`.** 15 minutes matches how long Claude often works between prompts. Some people read a long diff for 20+ minutes. Tune it from the manual check.
-4. **Review time.** Reviewing a PR in the browser leaves no local trace. List reviews with no time, or allow a manual "add 30m" in the pane (which would need editable state and moves away from "estimated from logs")?
+4. **Review time.** Reviewing a PR in the browser leaves no local trace. Built as listing reviews with no time. A manual "add 30m" would need editable state and moves away from "estimated from logs".
 
 ## Appendix A. What changed in phase 1
 
@@ -404,4 +415,33 @@ Every fact under every branch at once was a wall: seven rows a branch, long valu
 Details are lists, one item to a line under a dim label (Time, Asked, Commits, Changed, Sessions), shown by `/standup full`, a press on a branch's name in the pane (▸ ▾), or Show details (**d**) for all. Changed files are grouped by folder, three levels deep, instead of listed by path. A standup folds branches under 10 minutes with no PR and no commit into one "Also" line. A blank line separates branches.
 
 Commands are now read as the shell reads them (`facts.shell_lines`): a here-document's body is taken out of the command before looking for `git commit`, `gh pr create` or a test runner, so text written into a file isn't counted as one.
+
+## Appendix B. What changed in phase 2
+
+Built and checked against the author's own logs and repos for 5–10 October 2026.
+
+### B.1 git from its reflogs, not from `git log`
+
+The plan ran `git log --author` and `git reflog` in each repo. Reading the reflogs from `.git/logs` does the same with no git command: a branch's own reflog has every commit made on it on this machine, with its exact branch and minute (which `git log --source` only hints at), and HEAD's has the switches. It needs no author email, since a reflog is this machine's alone, so `authorEmails` was dropped. It runs nothing from the repo, and reading all of the author's five repos' reflogs takes 0.05 s.
+
+Claude makes most commits, and they're in the reflogs too. Counting them as the user's would make a two-hour autonomous run look attended, a commit every twenty minutes resetting the cap. So a reflog entry is Claude's when a session was at work in that repo within two minutes, or when a session ran a commit with that subject within five (a session can commit in another repo: `cd ../app && git commit`). Claude's commits join the group of the session that made them, which also catches commits Claude made with `-q` or from a script, which the transcripts don't show; the same subject from both sources is listed once.
+
+### B.2 GitHub in one GraphQL call
+
+`gh search prs --json` has no `headRefName`, which is what maps a branch to its PR. One `gh api graphql` request runs both searches (authored, reviewed) and returns the head branch, the draft flag and the user's own reviews with their times, in about 1.4 s. On the author's logs it named four PRs the transcripts never linked, gave PR #2 the title its `pr-link` lacked, and marked each PR's state.
+
+### B.3 The archive keeps the best day it has seen
+
+A day is archived once it is two days old (`--archive`, `--today` for tests). Reading back, the computed day wins while it has at least as much time as the archived one, and is written over it, so a settings change still reaches days whose logs exist. Once Claude Code has deleted a day's logs, the computed day comes up short or empty and the archived one is used, marked `source: "archive"`; folders excluded since are taken out of it, and its prompts too with `includePrompts` off.
+
+### B.4 The week
+
+`timesheet.ts`: a row per repo and PR or branch, a column per day, totals both ways. Each day's total is rounded to `roundTo`, then its cells: each down to a step, the steps left over to the cells nearest the next one, and a cell of more than half a step never rounded to nothing. On the terminal it is a grid of seven columns while the names get at least 14 columns (the names shrink to fit; about 71 columns in all), else two lists; on the desktop a Markdown table. Copy gives the Markdown table, Copy CSV and Save CSV a row per day and branch (§8.3), to `csvFolder/week-of-<first day>.csv`.
+
+### B.5 Smaller changes
+
+- The counts line says the PR's state ("PR merged", "draft PR"); a commit made by hand says "outside Claude" among the details; a day read from the archive says so.
+- A day with only reviews counts as a day with work, so a standup shows it.
+- The pane's Day and Week views are two buttons (**1**, **2**), the active one in the accent color.
+- `$.state` survives a reload, so drawings read fields new in 0.2.0 (`reviews`, `openPrs`, `handCommits`) as possibly missing, for days kept from 0.1.0.
 

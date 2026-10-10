@@ -1,7 +1,7 @@
 {
   "name": "worklog",
-  "version": "0.1.0",
-  "description": "What you worked on, day by day, from your Claude Code sessions: /standup for the last working day, /worklog for any day, grouped by repo, PR and branch with the time spent",
+  "version": "0.2.0",
+  "description": "What you worked on, day by day, from your Claude Code sessions and git: /standup for the last work day or the week, /worklog for any day or a week's timesheet, by repo, PR and branch with the time spent",
   "author": { "name": "Aseem Upadhyay", "url": "https://github.com/aseem-upadhyay" },
   "homepage": "https://github.com/aseem-upadhyay/qol-mods/tree/main/plugins/worklog",
   "repository": "https://github.com/aseem-upadhyay/qol-mods",
@@ -56,6 +56,37 @@
       "title": "Quote your prompts",
       "description": "Summaries quote up to three of the prompts you typed for each branch. Turn off if you paste standups where your prompts shouldn't go",
       "default": true
+    },
+    "weekStartsOn": {
+      "type": "string",
+      "title": "Week starts on",
+      "description": "The first day of a week in the timesheet and /standup week",
+      "options": ["monday", "sunday"],
+      "default": "monday"
+    },
+    "roundTo": {
+      "type": "number",
+      "title": "Round the timesheet to (minutes)",
+      "description": "Each cell rounds to this, and each day's cells still add up to its rounded total: 0, 5, 6, 10, 15, 30 or 60. 0 rounds nothing",
+      "default": 15
+    },
+    "useGitHub": {
+      "type": "boolean",
+      "title": "Read GitHub",
+      "description": "Use your gh login to read PR titles and states, the PRs you reviewed and your open PRs. Read only; skipped when gh isn't signed in",
+      "default": true
+    },
+    "extraRoots": {
+      "type": "string",
+      "title": "More folders with repos",
+      "description": "Comma-separated folders whose repos (two levels down) are read too, for work done without Claude: ~/code",
+      "default": ""
+    },
+    "csvFolder": {
+      "type": "string",
+      "title": "Save CSVs to",
+      "description": "Where the Week view's Save CSV writes",
+      "default": "~/Documents/worklog"
     }
   }
 }

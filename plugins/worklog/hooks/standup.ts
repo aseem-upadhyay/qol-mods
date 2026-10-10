@@ -7,8 +7,12 @@
  * and what a surface draws when worklog's own drawing isn't there: a
  * Markdown list that reads as plain text too.
  */
-import type { Day, Group, Repo, ScanResult, Standup } from '../types'
+import type { Day, Group, OpenPr, Repo, Review, ScanResult, Standup, Week } from '../types'
 import { addDays, dayLabel, duration, standupDays } from './days'
+import { groupLabel, headline } from './labels'
+import { roundingNote, sheetOf, sheetText, weekTitle } from './timesheet'
+
+export { groupLabel, headline }
 
 /** Claude's time alone is worth a mention from this many minutes. */
 export const NOTICEABLE_ALONE = 5
@@ -17,17 +21,27 @@ export const MINOR_MIN = 10
 
 export function footerFor(full: boolean): string {
   return full
-    ? 'Estimated from your Claude Code sessions. /standup copy copies this; /worklog shows any day.'
-    : 'Estimated from your Claude Code sessions. /standup full adds what you asked, committed and changed; /standup copy copies it; /worklog shows any day.'
+    ? 'Estimated from your Claude Code sessions and git. /standup copy copies this; /worklog shows any day.'
+    : 'Estimated from your Claude Code sessions and git. /standup full adds what you asked, committed and changed; /standup copy copies it; /worklog shows any day.'
+}
+
+export const WEEK_FOOTER = 'Estimated from your Claude Code sessions and git. /standup week copy copies it; /worklog week shows it with CSV export.'
+
+/** "PR merged", "PR open", "draft PR", from GitHub; null without it. */
+export function prState(g: Group): string | null {
+  if (!g.pr?.state) return null
+  if (g.pr.isDraft && g.pr.state === 'open') return 'draft PR'
+  return `PR ${g.pr.state}`
+}
+
+/** "api #3 Their fix": a reviewed or open PR, its repo by name alone. */
+export function prLine(p: Review | OpenPr): string {
+  const repo = p.repo.split('/').pop() ?? p.repo
+  return `${repo} #${p.number} ${p.title}${'isDraft' in p && p.isDraft ? ' (draft)' : ''}`
 }
 
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`
 
-/** "#12 fix-login" for a branch with a PR, the branch alone without. */
-export function groupLabel(g: Group): string {
-  const branch = g.branch || 'no branch'
-  return g.pr ? `#${g.pr.number} ${branch}` : branch
-}
 
 /** Whether a group is worth a line: time of the user's, or Claude's alone worth a mention. */
 export function isShown(g: Group): boolean {
@@ -40,36 +54,31 @@ export function isMinor(g: Group): boolean {
 }
 
 export function hasWork(day: Day | undefined): day is Day {
-  return !!day && day.repos.some(r => r.groups.some(isShown))
+  return !!day && (day.repos.some(r => r.groups.some(isShown)) || (day.reviews ?? []).length > 0)
 }
 
 export function emptyDay(date: string): Day {
-  return { date, totalMin: 0, unattendedMin: 0, hours: Array(24).fill(0), repos: [] }
+  return { date, totalMin: 0, unattendedMin: 0, hours: Array(24).fill(0), repos: [], reviews: [], source: 'logs' }
 }
 
-/** "3 repos · 7 branches · 2 PRs" */
+/** "3 repos · 7 branches · 2 PRs · 1 review"; empty for a day with none of them. */
 export function counts(day: Day): string {
   const groups = day.repos.flatMap(r => r.groups.filter(isShown))
   const repos = day.repos.filter(r => r.groups.some(isShown)).length
   const prs = groups.filter(g => g.pr).length
-  const parts = [plural(repos, 'repo', 'repos'), plural(groups.length, 'branch', 'branches')]
+  const reviews = (day.reviews ?? []).length
+  const parts = groups.length ? [plural(repos, 'repo', 'repos'), plural(groups.length, 'branch', 'branches')] : []
   if (prs) parts.push(plural(prs, 'PR', 'PRs'))
+  if (reviews) parts.push(plural(reviews, 'review', 'reviews'))
   return parts.join(' · ')
 }
 
-/**
- * What a branch's work was, in one line: the PR's title, else the name of
- * the session that spent most time on it, else its first commit, else the
- * longest thing the user asked. Null when there's nothing to say.
- */
-export function headline(g: Group): string | null {
-  const longest = [...g.asks].sort((a, b) => b.length - a.length)[0]
-  return g.pr?.title || g.what[0] || g.commits[0] || (longest ? `“${longest}”` : null)
-}
 
 /** The counts under the headline: "13:53–16:47 · 4 commits · 42 files · 44 test runs". */
 export function metaOf(g: Group): string {
   const parts = [`${g.first}–${g.last}`]
+  const state = prState(g)
+  if (state) parts.push(state)
   if (g.commitCount) parts.push(plural(g.commitCount, 'commit', 'commits'))
   if (g.fileCount) parts.push(plural(g.fileCount, 'file', 'files'))
   if (g.tests) parts.push(plural(g.tests, 'test run', 'test runs'))
@@ -100,7 +109,8 @@ export function sectionsOf(g: Group, withTime = true): Section[] {
   if (g.asks.length) out.push({ label: 'Asked', items: g.asks.map(a => ({ text: `“${a}”` })) })
   if (g.commitCount) {
     const more = g.commitCount - g.commits.length
-    const items: Item[] = g.commits.map(c => ({ text: c }))
+    const outside = new Set(g.handCommits ?? [])
+    const items: Item[] = g.commits.map(c => (outside.has(c) ? { text: c, note: ' · outside Claude' } : { text: c }))
     if (more > 0) items.push({ text: `+${more} more`, isDim: true })
     out.push({ label: 'Commits', items })
   }
@@ -160,6 +170,9 @@ export function dayLines(day: Day, heading: string, full = false): string[] {
     }
     if (folded.length) lines.push(`  - ${alsoLine(folded)}`)
   }
+  const reviewed = (day.reviews ?? []).map(prLine)
+  if (reviewed.length === 1) lines.push(`- Reviewed: ${reviewed[0]}`)
+  else if (reviewed.length) lines.push('- Reviewed:', ...reviewed.map(r => `  - ${r}`))
   return lines
 }
 
@@ -178,7 +191,7 @@ export function standupFor(found: ScanResult, ask: Ask, workDays: Set<number>, f
   const byDate = new Map(found.days.map(d => [d.date, d]))
   const day = (date: string) => byDate.get(date) ?? emptyDay(date)
   const today = found.today
-  const base = { lead: null, footer: footerFor(full), full }
+  const base = { lead: null, footer: footerFor(full), full, openPrs: [], week: null }
 
   if (ask.kind === 'day') {
     const isToday = ask.date === today
@@ -194,7 +207,19 @@ export function standupFor(found: ScanResult, ask: Ask, workDays: Set<number>, f
   const title = past.length === 1 ? `Standup for ${dayLabel(first)}` : `Standup since ${dayLabel(first)}`
   const note = worked.length ? null : `Nothing in your logs since ${dayLabel(first)}.`
   // With nothing before today, the note leads and today follows it.
-  return { ...base, title, blocks, note }
+  return { ...base, title, blocks, note, openPrs: found.openPrs }
+}
+
+/** `/standup week`: the week's timesheet, rounded per the settings. */
+export function weekStandup(week: Week): Standup {
+  return { title: null, blocks: [], note: null, lead: null, footer: WEEK_FOOTER, full: false, openPrs: [], week }
+}
+
+/** A week's text: its title and total, the timesheet in columns, the rounding. */
+export function weekLines(week: Week): string[] {
+  const sheet = sheetOf(week)
+  if (!sheet.rows.length) return [`${weekTitle(sheet)} · nothing in your logs`]
+  return [`${weekTitle(sheet)} · ${duration(sheet.total)}`, '', sheetText(sheet), '', roundingNote(week.roundTo)]
 }
 
 /** The standup's text: lead, title, the note or nothing, each day, footer. */
@@ -203,7 +228,10 @@ export function standupText(s: Standup): string {
   if (s.lead) parts.push(s.lead)
   if (s.title) parts.push(s.title)
   if (s.note) parts.push(s.note)
+  if (s.week) parts.push(weekLines(s.week).join('\n'))
   for (const b of s.blocks) parts.push(dayLines(b.day, b.heading, s.full).join('\n'))
+  const open = s.openPrs ?? []
+  if (open.length) parts.push(['Open PRs', ...open.map(p => `- ${prLine(p)}`)].join('\n'))
   if (s.footer) parts.push(s.footer)
   return parts.join('\n\n')
 }

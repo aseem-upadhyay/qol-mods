@@ -11,10 +11,10 @@ for (const surface of SURFACES) {
       const ui = await output(reply.text ?? '')
       expect(await ui.find({ text: rich ? '## Standup since Fri 9 Oct' : 'Standup since Fri 9 Oct' })).toBeDefined()
       expect(await ui.find({ text: rich ? '### Fri 9 Oct' : 'Fri 9 Oct' })).toBeDefined()
-      expect(await ui.find({ text: /^2 repos · 4 branches · 1 PR · Claude alone another 14m$/ })).toBeDefined()
+      expect(await ui.find({ text: /^2 repos · 4 branches · 1 PR · 1 review · Claude alone another 14m$/ })).toBeDefined()
       expect(await ui.find({ text: 'qol-mods' })).toBeDefined()
       expect(await ui.find({ text: 'A weekly coach' })).toBeDefined()
-      expect(await ui.find({ text: '13:53–16:47 · 3 commits · 7 files · 12 test runs · Claude alone 14m' })).toBeDefined()
+      expect(await ui.find({ text: '13:53–16:47 · PR merged · 3 commits · 7 files · 12 test runs · Claude alone 14m' })).toBeDefined()
       expect(await ui.find({ text: 'Also: tidy 6m' })).toBeDefined()
       expect(await ui.find({ text: /^“coach report is not available/ })).toBeUndefined()
       expect((await ui.findAll({ type: 'Svg' })).length > 0).toBe(rich)
@@ -71,7 +71,7 @@ for (const surface of SURFACES) {
         expect(await ui.find({ text: /^09 +10 +11 +12/ })).toBeDefined()
         expect(await ui.find({ text: /█+/ })).toBeDefined()
       }
-      expect(await ui.find({ text: '13:53–16:47 · 3 commits · 7 files · 12 test runs · Claude alone 14m' })).toBeDefined()
+      expect(await ui.find({ text: '13:53–16:47 · PR merged · 3 commits · 7 files · 12 test runs · Claude alone 14m' })).toBeDefined()
     })
 
     const timelines = async (ui: Awaited<ReturnType<Awaited<ReturnType<typeof boot>>['pane']>>) => {

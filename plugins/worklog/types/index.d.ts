@@ -3,14 +3,23 @@
 /** One session's share of a group: its attended minutes before overlaps were split. */
 export type Session = { id: string; title: string | null; min: number }
 
-/** A PR, from a `pr-link` record in the transcripts. */
+/** A PR: from a `pr-link` record in the transcripts, or GitHub's, matched by branch. */
 export type Pr = {
   number: number
   url: string
   repo: string
-  /** The --title Claude gave `gh pr create`; null when it wasn't seen. */
+  /** GitHub's title, else the --title Claude gave `gh pr create`; null when neither was seen. */
   title: string | null
+  /** From GitHub; null without it. */
+  state: 'open' | 'merged' | 'closed' | null
+  isDraft: boolean
 }
+
+/** A PR the user reviewed, on the day they did. */
+export type Review = { repo: string; number: number; title: string; url: string; at: string }
+
+/** One of the user's open PRs, from GitHub. */
+export type OpenPr = { repo: string; number: number; title: string; url: string; isDraft: boolean }
 
 /** Work on one branch of one repo, in one day. */
 export type Group = {
@@ -30,9 +39,11 @@ export type Group = {
   what: string[]
   /** Up to three of the user's prompts that day, quoted, in the order asked; empty with includePrompts off. */
   asks: string[]
-  /** Subjects of the commits Claude made, the first six, and how many in all. */
+  /** Subjects of the commits made (Claude's from its commands, all of them from git), the first six, and how many in all. */
   commits: string[]
   commitCount: number
+  /** Those made outside Claude: by hand, with no session at work in the repo. */
+  handCommits: string[]
   /** Files Claude changed, as [path in the repo, edits], the five most edited, and how many in all. */
   files: [string, number][]
   fileCount: number
@@ -72,6 +83,10 @@ export type Standup = {
   lead: string | null
   /** `/standup full`: what was asked, committed and changed under each branch, not only its headline. */
   full: boolean
+  /** The user's open PRs, listed after the days; empty without GitHub. */
+  openPrs: OpenPr[]
+  /** `/standup week`: the week's timesheet in place of the days. */
+  week: Week | null
   footer: string | null
 }
 
@@ -83,9 +98,30 @@ export type Day = {
   /** Minutes active in each hour, counted from dayStartsAt. */
   hours: number[]
   repos: Repo[]
+  /** PRs the user reviewed that day, from GitHub. */
+  reviews: Review[]
+  /** "archive" for a day read back after Claude Code deleted its logs. */
+  source: 'logs' | 'archive'
 }
 
-export type ScanResult = { today: string; days: Day[]; warnings: string[] }
+export type ScanResult = {
+  today: string
+  days: Day[]
+  openPrs: OpenPr[]
+  /** Whether GitHub was read: off in the settings, or unavailable (no gh, signed out, offline). */
+  github: 'ok' | 'off' | 'unavailable'
+  warnings: string[]
+}
+
+/** A week of days, as /standup week and the pane's Week view show it. */
+export type Week = {
+  /** The week's first day, YYYY-MM-DD. */
+  start: string
+  /** Its seven days, a day with nothing in it included. */
+  days: Day[]
+  /** Minutes each cell is rounded to; 0 for none. */
+  roundTo: number
+}
 
 export type ScanState = { status: 'idle' | 'running' | 'failed'; error: string | null }
 
@@ -105,6 +141,10 @@ declare module 'claude-code' {
       open: Record<string, boolean>
       /** Every branch's details shown in the pane. */
       allOpen: boolean
+      /** Which view the pane shows. */
+      tab: 'day' | 'week'
+      /** The week the Week view shows, by its first day; null for this week. */
+      week: string | null
     }
   }
 }

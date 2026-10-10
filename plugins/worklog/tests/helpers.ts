@@ -23,7 +23,15 @@ export type Setup = {
   headless?: boolean
 }
 
-export type Seen = { argv: string[][]; copies: string[]; toasts: string[]; opened: number; commands: string[] }
+export type Seen = {
+  argv: string[][]
+  copies: string[]
+  toasts: string[]
+  opened: number
+  commands: string[]
+  /** Files written with $.fs.write. */
+  writes: { path: string; text: string }[]
+}
 
 const ran = (exitCode: number, stdout: string, stderr = '') => ({
   value: { exitCode, stdout, stderr, isStdoutTruncated: false, isStderrTruncated: false },
@@ -32,7 +40,7 @@ const ran = (exitCode: number, stdout: string, stderr = '') => ({
 export async function boot($: Engine, on: On, surface: Surface, setup: Setup = {}) {
   const clock = mock.clock(on, { now: NOW })
   mock.env(on, { HOME: '/home/me' })
-  const seen: Seen = { argv: [], copies: [], toasts: [], opened: 0, commands: [] }
+  const seen: Seen = { argv: [], copies: [], toasts: [], opened: 0, commands: [], writes: [] }
 
   on('process.run', async (_$, e) => {
     seen.argv.push([...e.argv])
@@ -54,6 +62,10 @@ export async function boot($: Engine, on: On, surface: Surface, setup: Setup = {
     return { value: undefined }
   })
   on('ui.log', async () => ({ value: undefined }))
+  on('fs.write', async (_$, e) => {
+    seen.writes.push({ path: e.path, text: e.text })
+    return { value: undefined }
+  })
   // Beneath the plugin, a command's row as the engine draws it.
   on('ui.render', { component: 'CommandOutput' }, async () => ({ type: 'engine', ref: 0 }))
   on('ui.copy', async (_$, e) => {

@@ -67,10 +67,10 @@ for (const surface of SURFACES) {
 
     test('anything else explains the command', async ($, on) => {
       const { run, seen } = await boot($, on, surface)
-      for (const args of ['help', 'last week', '2026-10-09 2026-10-10']) {
-        expect((await run('standup', args)).text).toMatch(/^worklog reads your Claude Code sessions on this machine/)
+      for (const args of ['help', 'last month', '2026-10-09 2026-10-10', 'week 2026-10-09']) {
+        expect((await run('standup', args)).text).toMatch(/^worklog reads your Claude Code sessions and git on this machine/)
       }
-      expect((await run('worklog', 'whenever')).text).toMatch(/^worklog reads your Claude Code sessions/)
+      expect((await run('worklog', 'whenever')).text).toMatch(/^worklog reads your Claude Code sessions and git/)
       expect(seen.argv).toEqual([])
     })
 

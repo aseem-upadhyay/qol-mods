@@ -1,5 +1,5 @@
 """Tests for hooks/scan.py, end to end. Run: python3 -m unittest discover -s tests"""
-import json, os, re, subprocess, sys, tempfile, unittest
+import datetime, json, os, re, shutil, subprocess, sys, tempfile, unittest
 
 SCAN = os.path.join(os.path.dirname(__file__), "..", "hooks", "scan.py")
 # Days start at 04:00 local: pin the zone so they fall the same everywhere.
@@ -70,9 +70,27 @@ class ScanTest(unittest.TestCase):
         self.write()
         argv = [sys.executable, SCAN, "--projects", self.projects, "--cache", self.cache,
                 "--from", first, "--to", last, "--home", self.home,
-                "--temp", os.path.join(self.home, "scratch") + "/", *extra]
+                "--temp", os.path.join(self.home, "scratch") + "/", "--github", "off", *extra]
         out = subprocess.run(argv, check=True, capture_output=True, text=True, env=ENV).stdout
         return json.loads(out)
+
+    def reflog(self, root, branch, *lines):
+        """Git's record of `branch` in the repo at `root`: (HH:MM on DAY, message)."""
+        path = os.path.join(root, ".git", "logs", "refs", "heads", branch)
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "a") as fh:
+            for hhmm, message in lines:
+                ts = int(datetime.datetime.fromisoformat(at(hhmm).replace("Z", "+00:00")).timestamp())
+                fh.write(f"{'a' * 40} {'b' * 40} Me <me@example.com> {ts} +0000\t{message}\n")
+
+    def fake_gh(self, answer=None, code=0):
+        """A gh that answers every call with `answer`, or fails with `code`."""
+        path = os.path.join(self.tmp.name, "gh")
+        with open(path, "w") as fh:
+            fh.write("#!/bin/sh\n")
+            fh.write(f"exit {code}\n" if code else "cat <<'EOF'\n" + json.dumps({"data": answer}) + "\nEOF\n")
+        os.chmod(path, 0o755)
+        return path
 
     def day(self, *extra):
         return self.scan(DAY, DAY, *extra)["days"][0]
@@ -161,7 +179,8 @@ class ScanTest(unittest.TestCase):
         self.add("s1", "pr-link", at("10:03"), prNumber=7, prUrl="https://github.com/me/app/pull/7",
                  prRepository="me/app")
         self.assertEqual(self.group(self.day(), "app", "feat")["pr"],
-                         {"number": 7, "url": "https://github.com/me/app/pull/7", "repo": "me/app", "title": None})
+                         {"number": 7, "url": "https://github.com/me/app/pull/7", "repo": "me/app", "title": None,
+                          "state": None, "isDraft": False})
 
     def test_a_pr_opened_in_the_turn_that_made_its_branch_goes_to_that_branch(self):
         # Records carry the branch the turn started on; the next prompt carries the new one.
@@ -278,6 +297,101 @@ class ScanTest(unittest.TestCase):
         self.assertEqual(g["tests"], 1)
         self.assertEqual(g["pr"]["title"], "Fix login")
         self.assertEqual(self.group(self.day("--no-asks"), "app", "feat")["asks"], [])
+
+    # -- git (SPEC.md §5.2)
+
+    def test_a_commit_made_outside_claude_counts_as_the_users_time(self):
+        self.reflog(self.api, "fix", ("19:00", "commit: Fix the rate limit"))
+        self.assertEqual(self.day()["repos"], [])   # api isn't a repo any session was in
+        day = self.day("--extra-roots", os.path.join(self.home, "work"))
+        g = self.group(day, "api", "fix")
+        self.assertEqual((g["rawMin"], g["first"], g["last"]), (6, "18:55", "19:01"))
+        self.assertEqual((g["commits"], g["handCommits"], g["sessions"]), (["Fix the rate limit"], ["Fix the rate limit"], []))
+
+    def test_a_commit_claude_made_goes_with_its_session_once(self):
+        self.prompt("s1", at("10:00"), self.app, "old")
+        self.add("s1", "assistant", at("10:02"), self.app, "old", message={"content": [
+            {"type": "tool_use", "name": "Bash", "input": {"command": 'git commit -qm "Add login"'}}]})
+        # git says it landed on "new": the turn made the branch, and records carry the turn's first.
+        self.reflog(self.app, "new", ("10:03", "branch: Created from old"), ("10:03", "commit: Add login"))
+        day = self.day()
+        g = self.group(day, "app", "old")
+        self.assertEqual((g["commits"], g["handCommits"]), (["Add login"], []))
+        self.assertEqual(day["totalMin"], 8)   # 09:55 to 10:02: git added no time of its own
+
+    def test_a_commit_a_session_made_in_another_repo_is_still_claudes(self):
+        self.prompt("s1", at("10:00"), self.api, "main")
+        self.add("s1", "assistant", at("10:01"), self.api, "main", message={"content": [
+            {"type": "tool_use", "name": "Bash", "input": {"command": 'cd ../app && git commit -qm "Add login"'}}]})
+        self.prompt("s2", at("08:00"), self.app, "main")   # app is a repo sessions were in
+        self.reflog(self.app, "main", ("10:01", "commit: Add login"))
+        day = self.day()
+        self.assertEqual(self.group(day, "api", "main")["commits"], ["Add login"])
+        self.assertEqual(self.group(day, "app", "main")["commits"], [])
+
+    def test_a_branch_switch_by_hand_is_time_too(self):
+        os.makedirs(os.path.join(self.app, ".git", "logs"), exist_ok=True)
+        ts = int(datetime.datetime.fromisoformat(at("21:00").replace("Z", "+00:00")).timestamp())
+        with open(os.path.join(self.app, ".git", "logs", "HEAD"), "w") as fh:
+            fh.write(f"{'a' * 40} {'b' * 40} Me <me@example.com> {ts} +0000\tcheckout: moving from main to review\n")
+        self.prompt("s1", at("08:00"), self.app, "main")
+        self.assertEqual(self.group(self.day(), "app", "review")["rawMin"], 6)
+
+    # -- the archive (SPEC.md §7.2)
+
+    def test_a_settled_day_is_kept_and_read_back_once_its_logs_are_gone(self):
+        archive = os.path.join(self.tmp.name, "archive")
+        keep = ("--archive", archive, "--today", "2026-10-12")
+        self.prompt("s1", at("10:00"), self.app, "feat")
+        self.assertEqual(self.day(*keep)["source"], "logs")
+        self.assertTrue(os.path.exists(os.path.join(archive, DAY + ".json")))
+        shutil.rmtree(self.projects)   # Claude Code deletes the log
+        self.rows = {}
+        day = self.day(*keep)
+        self.assertEqual((day["source"], day["totalMin"]), ("archive", 6))
+        self.assertEqual(self.group(day, "app", "feat")["asks"], ["fix the login bug"])
+        self.assertEqual(self.group(self.day(*keep, "--no-asks"), "app", "feat")["asks"], [])
+        day = self.day(*keep, "--exclude", self.app)
+        self.assertEqual((day["repos"], day["totalMin"]), ([], 0))
+
+    def test_a_day_too_new_to_have_settled_is_not_kept(self):
+        archive = os.path.join(self.tmp.name, "archive")
+        self.prompt("s1", at("10:00"), self.app, "feat")
+        self.day("--archive", archive, "--today", "2026-10-08")
+        self.assertFalse(os.path.exists(os.path.join(archive, DAY + ".json")))
+
+    # -- GitHub (SPEC.md §5.3)
+
+    ANSWER = {"viewer": {"login": "me"},
+              "authored": {"nodes": [
+                  {"number": 9, "title": "Add worklog", "url": "u9", "state": "OPEN", "isDraft": True,
+                   "headRefName": "worklog", "repository": {"nameWithOwner": "me/app"}},
+                  {"number": 7, "title": "Fix it properly", "url": "u7", "state": "MERGED", "isDraft": False,
+                   "headRefName": "fix", "repository": {"nameWithOwner": "me/app"}}]},
+              "reviewed": {"nodes": [
+                  {"number": 3, "title": "Their fix", "url": "u3", "state": "OPEN", "isDraft": False,
+                   "headRefName": "x", "repository": {"nameWithOwner": "them/api"},
+                   "reviews": {"nodes": [{"author": {"login": "me"}, "submittedAt": DAY + "T12:00:00Z"}]}}]}}
+
+    def test_github_names_the_prs_and_says_what_was_reviewed_and_is_open(self):
+        self.prompt("s1", at("10:00"), self.app, "worklog")
+        self.prompt("s2", at("11:00"), self.app, "fix")
+        self.add("s2", "pr-link", at("11:01"), prNumber=7, prUrl="https://github.com/me/app/pull/7", prRepository="me/app")
+        out = self.scan(DAY, DAY, "--github", "on", "--gh", self.fake_gh(self.ANSWER))
+        day = out["days"][0]
+        self.assertEqual(out["github"], "ok")
+        self.assertEqual(self.group(day, "app", "worklog")["pr"],
+                         {"number": 9, "url": "u9", "repo": "me/app", "title": "Add worklog", "state": "open", "isDraft": True})
+        self.assertEqual(self.group(day, "app", "fix")["pr"]["title"], "Fix it properly")
+        self.assertEqual(day["reviews"], [{"repo": "them/api", "number": 3, "title": "Their fix", "url": "u3", "at": "12:00"}])
+        self.assertEqual([(p["number"], p["isDraft"]) for p in out["openPrs"]], [(9, True)])
+
+    def test_without_github_the_rest_stands(self):
+        self.prompt("s1", at("10:00"), self.app, "worklog")
+        out = self.scan(DAY, DAY, "--github", "on", "--gh", self.fake_gh(code=1))
+        self.assertEqual((out["github"], out["openPrs"]), ("unavailable", []))
+        self.assertIsNone(self.group(out["days"][0], "app", "worklog")["pr"])
+        self.assertEqual(self.scan(DAY, DAY)["github"], "off")
 
     def test_hours_show_when(self):
         self.prompt("s1", at("10:00"), self.app, "feat")
