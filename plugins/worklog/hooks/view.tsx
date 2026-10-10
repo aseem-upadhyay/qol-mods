@@ -10,10 +10,12 @@
  */
 import type { Color, ElementTable, RenderElement, RenderSurface } from 'claude-code'
 
-import type { Day, Group, Repo, Standup } from '../types'
+import type { Day, Group, OpenPr, Repo, Standup, Week } from '../types'
 import * as A from './art'
 import { duration } from './days'
-import { alsoLine, counts, groupLabel, hasWork, headline, isShown, metaOf, NOTICEABLE_ALONE, sectionsOf, splitMinor } from './standup'
+import { alsoLine, counts, groupLabel, hasWork, headline, isShown, metaOf, NOTICEABLE_ALONE, prLine, sectionsOf, splitMinor } from './standup'
+import { clockHours, columnLabel, roundingNote, sheetMarkdown, sheetOf, weekTitle } from './timesheet'
+import type { Sheet } from './timesheet'
 import type { Section } from './standup'
 
 /** The terminal's stand-ins for the palette's slots: theme colors, so they follow light and dark. */
@@ -126,6 +128,15 @@ function legend(look: Look, day: Day, slots: Map<string, number>): RenderElement
   )
 }
 
+/** What the day held, Claude's time alone, and whether it came from the archive. */
+function countsLine(look: Look, day: Day, alone: string): RenderElement | null {
+  const { Text } = look.els
+  const parts = [counts(day) + alone]
+  if (day.source === 'archive') parts.push('from the archive: its logs are gone')
+  const text = parts.filter(Boolean).join(' · ').replace(/^ · /, '')
+  return text ? <Text dimColor>{text}</Text> : null
+}
+
 /** Heading and total, what the day held, and the day split by repo. */
 export function summary(look: Look, day: Day, heading: string, isToday: boolean, withLegend = true): RenderElement {
   const { Box, Text } = look.els
@@ -165,7 +176,7 @@ export function summary(look: Look, day: Day, heading: string, isToday: boolean,
   return (
     <Box flexDirection="column" rowGap={look.rich ? 1 : 0}>
       {top}
-      <Text dimColor>{`${counts(day)}${alone}`}</Text>
+      {countsLine(look, day, alone)}
       <Box flexDirection="column" marginTop={look.rich ? 0 : 1}>
         {shareBar(look, day, slots, Math.max(10, look.columns - 2))}
       </Box>
@@ -441,7 +452,7 @@ export function footnote(look: Look, idleGapMin: number, maxUnattendedMin: numbe
   const { Text } = look.els
   return (
     <Text dimColor>
-      {`Estimated from your Claude Code sessions. A ${idleGapMin}-minute gap ends a stretch of work, Claude working alone counts for ${maxUnattendedMin} minutes after your last message, and parallel sessions share the time.`}
+      {`Estimated from your Claude Code sessions and git. A ${idleGapMin}-minute gap ends a stretch of work, Claude working alone counts for ${maxUnattendedMin} minutes after your last message, and parallel sessions share the time.`}
     </Text>
   )
 }
@@ -465,14 +476,17 @@ export function drawStandup(look: Look, s: Standup): RenderElement {
       {s.lead ? <Text color="success">{s.lead}</Text> : null}
       {title}
       {s.note ? <Text dimColor>{s.note}</Text> : null}
+      {s.week ? weekView(look, s.week) : null}
       {s.blocks.map((b, i) => (
         <Box flexDirection="column" marginTop={i === 0 && s.title === null ? 0 : 1}>
           {summary(look, b.day, b.heading, b.isToday, false)}
           {hasWork(b.day)
             ? repoList(look, b.day, { timeline: false, detail: s.full ? 'full' : 'compact', withTime: false, foldMinor: !s.full })
             : null}
+          {reviewList(look, b.day)}
         </Box>
       ))}
+      {openPrList(look, s.openPrs ?? [])}
       {s.footer ? (
         <Box marginTop={1}>
           <Text dimColor>{s.footer}</Text>
@@ -481,3 +495,207 @@ export function drawStandup(look: Look, s: Standup): RenderElement {
     </Box>
   )
 }
+
+// -- reviews and open PRs, from GitHub
+
+/** "Reviewed": the PRs the user reviewed that day, a line each with when. */
+export function reviewList(look: Look, day: Day): RenderElement | null {
+  const { Box, Text } = look.els
+  const reviews = day.reviews ?? []
+  if (!reviews.length) return null
+  return (
+    <Box flexDirection="column" marginTop={1}>
+      <Text bold>Reviewed</Text>
+      {reviews.map(r => (
+        <Box paddingLeft={2}>
+          <Text wrap="wrap">
+            {prLine(r)}
+            <Text dimColor>{`  ${r.at}`}</Text>
+          </Text>
+        </Box>
+      ))}
+    </Box>
+  )
+}
+
+/** The user's open PRs, after a standup's days. */
+export function openPrList(look: Look, prs: OpenPr[]): RenderElement | null {
+  const { Box, Text } = look.els
+  if (!prs.length) return null
+  return (
+    <Box flexDirection="column" marginTop={1}>
+      <Text bold>Open PRs</Text>
+      {prs.map(p => (
+        <Box paddingLeft={2}>
+          <Text wrap="wrap">
+            {`${p.repo.split('/').pop() ?? p.repo} `}
+            <Text color="suggestion">{`#${p.number}`}</Text>
+            {` ${p.title}`}
+            {p.isDraft ? <Text dimColor> · draft</Text> : null}
+          </Text>
+        </Box>
+      ))}
+    </Box>
+  )
+}
+
+// -- the week
+
+const DAY_COLS = 7
+const TOTAL_COLS = 8
+/** Narrower than this for the names, the week is two lists instead of a grid. */
+const MIN_SHEET_LABEL_COLS = 14
+
+/** The repos of a timesheet, as slotsFor takes them, so each keeps its day-view color. */
+function sheetRepos(sheet: Sheet): Repo[] {
+  const byRoot = new Map<string, Repo>()
+  for (const r of sheet.rows) {
+    const repo = byRoot.get(r.root) ?? { name: r.repo, slug: r.slug, root: r.root, minutes: 0, hours: [], groups: [] }
+    repo.minutes += r.total
+    byRoot.set(r.root, repo)
+  }
+  return [...byRoot.values()]
+}
+
+/**
+ * A week's timesheet: its title and total, then a row per repo and branch
+ * with a column per day. A Markdown table where the surface draws one;
+ * columns of text on the terminal, or, too narrow for seven columns, the
+ * days' totals and the branches' as two lists.
+ */
+export function weekView(look: Look, week: Week): RenderElement {
+  const { Box, Text } = look.els
+  const sheet = sheetOf(week)
+  const title = weekTitle(sheet)
+  const Markdown = look.rich && 'Markdown' in look.els ? look.els.Markdown : null
+  const header = Markdown ? (
+    <Box flexDirection="row" justifyContent="space-between" columnGap={2}>
+      <Markdown text={`### ${md(title)}`} />
+      {sheet.rows.length ? <Markdown text={`### ${duration(sheet.total)}`} /> : null}
+    </Box>
+  ) : (
+    <Box flexDirection="row" justifyContent="space-between" columnGap={2}>
+      <Text bold>{title}</Text>
+      {sheet.rows.length ? <Text bold>{duration(sheet.total)}</Text> : null}
+    </Box>
+  )
+  if (!sheet.rows.length) {
+    return (
+      <Box flexDirection="column">
+        {header}
+        <Text dimColor>Nothing in your logs for this week.</Text>
+      </Box>
+    )
+  }
+  const slots = slotsFor(sheetRepos(sheet))
+  const note = <Text dimColor>{roundingNote(sheet.roundTo)}</Text>
+  if (Markdown) {
+    return (
+      <Box flexDirection="column" rowGap={1}>
+        {header}
+        <Markdown text={sheetMarkdown(sheet)} />
+        {note}
+      </Box>
+    )
+  }
+
+  // Names get what the seven columns leave, up to what the longest needs; long ones are cut.
+  const longest = Math.max(12, ...sheet.rows.map(r => Math.max(r.label.length + 2, r.repo.length + 2))) + 1
+  const labelCols = Math.min(longest, 32, look.columns - 7 * DAY_COLS - TOTAL_COLS)
+  if (labelCols < MIN_SHEET_LABEL_COLS) {
+    // Too narrow for the grid: each day's total, then each branch's.
+    return (
+      <Box flexDirection="column" rowGap={1}>
+        {header}
+        <Box flexDirection="column">
+          {sheet.dates.map((d, i) => (
+            <Box flexDirection="row" justifyContent="space-between" width={Math.min(look.columns, 30)}>
+              <Text>{columnLabel(d)}</Text>
+              <Text {...((sheet.dayTotals[i] ?? 0) ? {} : { dimColor: true })}>{clockHours(sheet.dayTotals[i] ?? 0) || '·'}</Text>
+            </Box>
+          ))}
+        </Box>
+        <Box flexDirection="column">
+          {sheet.rows.map((r, i) => (
+            <Box flexDirection="column">
+              {i === 0 || sheet.rows[i - 1]?.root !== r.root ? (
+                <Box flexDirection="row" columnGap={1}>
+                  {dot(look, slots.get(r.root) ?? 0, r.repo)}
+                  <Text bold>{r.repo}</Text>
+                </Box>
+              ) : null}
+              <Box flexDirection="row" justifyContent="space-between" width={look.columns}>
+                <Box flexShrink={1}>
+                  <Text wrap="truncate-end">{`  ${r.label}`}</Text>
+                </Box>
+                <Text>{clockHours(r.total)}</Text>
+              </Box>
+            </Box>
+          ))}
+        </Box>
+        {note}
+      </Box>
+    )
+  }
+
+  const cells = (values: string[], total: string, bold = false): RenderElement[] => [
+    ...values.map(v => (
+      <Box width={DAY_COLS} flexShrink={0} justifyContent="flex-end">
+        <Text {...(bold ? { bold: true } : {})} {...(v === '·' ? { dimColor: true } : {})}>
+          {v}
+        </Text>
+      </Box>
+    )),
+    <Box width={TOTAL_COLS} flexShrink={0} justifyContent="flex-end">
+      <Text bold>{total}</Text>
+    </Box>,
+  ]
+  return (
+    <Box flexDirection="column" rowGap={1}>
+      {header}
+      <Box flexDirection="column">
+        <Box flexDirection="row">
+          <Box width={labelCols} flexShrink={0}>
+            <Text> </Text>
+          </Box>
+          {sheet.dates.map(d => (
+            <Box width={DAY_COLS} flexShrink={0} justifyContent="flex-end">
+              <Text dimColor>{columnLabel(d)}</Text>
+            </Box>
+          ))}
+          <Box width={TOTAL_COLS} flexShrink={0} justifyContent="flex-end">
+            <Text dimColor>Total</Text>
+          </Box>
+        </Box>
+        {sheet.rows.map((r, i) => (
+          <Box flexDirection="column">
+            {i === 0 || sheet.rows[i - 1]?.root !== r.root ? (
+              <Box flexDirection="row" columnGap={1} marginTop={i === 0 ? 0 : 1}>
+                {dot(look, slots.get(r.root) ?? 0, r.repo)}
+                <Text bold>{r.repo}</Text>
+              </Box>
+            ) : null}
+            <Box flexDirection="row">
+              <Box width={labelCols} flexShrink={0}>
+                <Text wrap="truncate-end">
+                  {'  '}
+                  {r.pr ? <Text color="suggestion">{`#${r.pr.number} `}</Text> : null}
+                  {r.branch || 'no branch'}
+                </Text>
+              </Box>
+              {cells(r.cells.map(c => clockHours(c) || '·'), clockHours(r.total))}
+            </Box>
+          </Box>
+        ))}
+        <Box flexDirection="row" marginTop={1}>
+          <Box width={labelCols} flexShrink={0}>
+            <Text bold>Total</Text>
+          </Box>
+          {cells(sheet.dayTotals.map(t => clockHours(t) || '·'), clockHours(sheet.total), true)}
+        </Box>
+      </Box>
+      {note}
+    </Box>
+  )
+}
+

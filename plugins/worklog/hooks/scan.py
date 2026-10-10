@@ -5,7 +5,8 @@ Usage:
   scan.py --projects DIR --cache FILE --from DAY --to DAY
           [--home DIR] [--idle-gap MIN] [--lead-in MIN] [--max-unattended MIN]
           [--day-start HH:MM] [--exclude PATH,PATH] [--include-non-repo]
-          [--temp PATH,PATH]
+          [--temp PATH,PATH] [--extra-roots PATH,PATH] [--github on|off] [--gh PATH]
+          [--archive DIR]
 
 A DAY is a date (2026-10-09) or a whole number of days from today (-1 for
 yesterday, 0 for today), today being the day `--day-start` says it is now.
@@ -36,9 +37,10 @@ split; `first` and `last` are local "HH:MM"; `spans` and `aloneSpans` are the
 minutes attended and left to Claude, as [from, to) minutes after the day's
 start; a repo's `hours` are its attended minutes in each hour.
 """
-import argparse, bisect, contextlib, datetime, fcntl, glob, json, os, re, sys
+import argparse, bisect, contextlib, datetime, fcntl, glob, json, os, re, sys, time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import ghsearch, gitlog  # noqa: E402
 from facts import facts_of, folders, pick_asks, relative  # noqa: E402
 from timeline import AGENT, HUMAN, Rules, allocate, attended  # noqa: E402
 
@@ -306,6 +308,42 @@ def whole(shares, total):
     return floors
 
 
+ARCHIVE_AFTER_DAYS = 2
+
+
+def load_json(path):
+    try:
+        with open(path) as fh:
+            return json.load(fh)
+    except (OSError, ValueError):
+        return None
+
+
+def save_json(path, value):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    tmp = f"{path}.{os.getpid()}.tmp"
+    with open(tmp, "w") as fh:
+        json.dump(value, fh, separators=(",", ":"))
+    os.replace(tmp, path)
+
+
+def from_archive(day, excludes, asks):
+    """An archived day as today's settings would show it: excluded repos
+    taken out (their minutes with them), prompts dropped when not quoted."""
+    day = json.loads(json.dumps(day))
+    gone = [r for r in day.get("repos", []) if r.get("root") and excluded(r["root"], excludes)]
+    for repo in gone:
+        day["totalMin"] = max(0, day.get("totalMin", 0) - repo.get("minutes", 0))
+        day["hours"] = [max(0, a - b) for a, b in zip(day.get("hours", [0] * 24), repo.get("hours", [0] * 24))]
+    day["repos"] = [r for r in day.get("repos", []) if r not in gone]
+    if not asks:
+        for repo in day["repos"]:
+            for g in repo.get("groups", []):
+                g["asks"] = []
+    day["source"] = "archive"
+    return day
+
+
 def parse_day(text, today):
     """A date, or a whole number of days from `today`."""
     if re.fullmatch(r"[+-]?\d+", text.strip()):
@@ -345,12 +383,21 @@ def main(argv=None):
     ap.add_argument("--no-asks", dest="asks", action="store_false")
     # Folders whose work never counts: scratch repos Claude makes and drops.
     ap.add_argument("--temp", default=",".join(TEMP_ROOTS))
+    # Folders holding repos worked on without Claude, whose git is read too.
+    ap.add_argument("--extra-roots", default="")
+    ap.add_argument("--github", choices=("on", "off"), default="on")
+    ap.add_argument("--gh", default="", help="the gh to run; found on PATH when empty")
+    # Where finished days are kept for good (SPEC.md §7.2); none when empty.
+    ap.add_argument("--archive", default="")
+    # Today's date, for tests; the clock's otherwise.
+    ap.add_argument("--today", default="")
     args = ap.parse_args(argv)
 
     rules = Rules(args.idle_gap, args.lead_in, args.max_unattended)
     h, _, mm = args.day_start.partition(":")
     day_start = int(h or 0) * 60 + int(mm or 0)
-    today = (datetime.datetime.now() - datetime.timedelta(minutes=day_start)).date()
+    today = (datetime.date.fromisoformat(args.today) if args.today
+             else (datetime.datetime.now() - datetime.timedelta(minutes=day_start)).date())
     first = parse_day(args.first, today)
     last = parse_day(args.last, today)
     days = day_bounds(first, last, day_start)
@@ -446,7 +493,49 @@ def main(argv=None):
             key = (root, branch)
             if key not in links or links[key]["at"] < at:
                 links[key] = {"at": at, "number": number, "url": url, "repo": slug, "title": title}
+
+        # GitHub: titles and states, reviews, open PRs (SPEC.md §5.3).
+        gh_data, gh_status = None, "off"
+        if args.github == "on":
+            gh_data = ghsearch.cached(cache, ghsearch.find_gh(args.gh or None), days[0][0], time.time())
+            gh_status = "ok" if gh_data is not None else "unavailable"
         save_cache(args.cache, cache)
+
+    # 2b. Each repo's own git (SPEC.md §5.2): a commit or a branch switch with
+    # no session at work in that repo around it is the user's own, outside
+    # Claude, and counts as their time like a prompt does. One a session made
+    # (Claude was busy in the repo within two minutes, or a session ran a
+    # commit with that message) goes where that session was.
+    claude_at = {}   # root -> {minute: sid}
+    for sid, where in places.items():
+        for m, (root, _) in where:
+            if root:
+                claude_at.setdefault(root, {})[m] = sid
+    told = {}        # commit subject -> [(minute, sid)] of the sessions that ran it
+    for hit in parsed:
+        for sid, at, fact, value in hit["facts"]:
+            if fact == "commit" and sid in places:
+                told.setdefault(value, []).append((at, sid))
+    extra = [os.path.normpath(os.path.expanduser(p.strip())) for p in args.extra_roots.split(",") if p.strip()]
+    repo_roots = {r for r in roots.values() if r} | set(gitlog.discover(extra))
+    repo_roots = sorted(r for r in repo_roots if not r.startswith(temp) and not excluded(r, excludes) and r != home)
+    git_commits = []  # (minute, ("sid", sid) or ("key", key), subject, outside Claude)
+    for root in repo_roots:
+        near = claude_at.get(root, {})
+        for m, branch, kind, subject in gitlog.events(root, lo * 60, hi * 60):
+            sid = next((near[m + d] for d in (0, -1, 1, -2, 2) if m + d in near), None)
+            if sid is None and subject:
+                sid = next((s for t, s in told.get(subject, []) if abs(t - m) <= 5), None)
+            if sid is not None:
+                if kind == "commit":
+                    git_commits.append((m, ("sid", sid), subject, False))
+                continue
+            gid = "git:" + root
+            act = activity.setdefault(gid, {})
+            act[m] = act.get(m, 0) | HUMAN
+            places.setdefault(gid, []).append((m, (root, branch)))
+            if kind == "commit":
+                git_commits.append((m, ("key", (root, branch)), subject, True))
 
     # 3. Whether the user was there is a session's question, asked across its
     # branch switches; each minute then goes to the repo and branch the
@@ -482,7 +571,40 @@ def main(argv=None):
 
     # 4. Facts go where their session was at the time, by day.
     starts = [d[1] for d in days]
-    found = {}   # (day index, key) -> {"asks", "commits", "edits", "tests"}
+    found = {}   # (day index, key) -> {"asks", "commits", "hand", "edits", "tests"}
+
+    def new_found():
+        return {"asks": [], "commits": [], "hand": set(), "edits": {}, "tests": 0}
+
+    for m, (how, ref), subject, outside in git_commits:
+        if not days[0][1] <= m < days[-1][2] or (how == "sid" and ref not in placed):
+            continue
+        key = place_in(ref, m) if how == "sid" else ref
+        f = found.setdefault((bisect.bisect_right(starts, m) - 1, key), new_found())
+        f["commits"].append((m, subject))
+        if outside:
+            f["hand"].add(subject)
+
+    # GitHub's PRs, by number and by branch; its reviews, by day.
+    gh_prs, gh_branches, reviews_by_day = {}, {}, {}
+    excluded_slugs_gh = {(repo_info(e)["slug"] or "").lower() for e in excludes if os.path.isdir(os.path.join(e, ".git"))}
+    if gh_data:
+        for p in gh_data["authored"]:
+            gh_prs[(p["repo"].lower(), p["number"])] = p
+            k = (p["repo"].lower(), p["branch"])
+            if k not in gh_branches or gh_branches[k]["number"] < p["number"]:
+                gh_branches[k] = p
+        for p in gh_data["reviewed"]:
+            if p["repo"].lower() in excluded_slugs_gh:
+                continue
+            for stamp in p["reviewedAt"]:
+                m = minute_of(stamp)
+                if m is None or not days[0][1] <= m < days[-1][2]:
+                    continue
+                day_reviews = reviews_by_day.setdefault(bisect.bisect_right(starts, m) - 1, [])
+                if not any(r["repo"] == p["repo"] and r["number"] == p["number"] for r in day_reviews):
+                    day_reviews.append({"repo": p["repo"], "number": p["number"], "title": p["title"],
+                                        "url": p["url"], "at": hhmm(m)})
     for hit in parsed:
         for sid, at, fact, value in hit["facts"]:
             if sid not in placed or not days[0][1] <= at < days[-1][2]:
@@ -490,8 +612,7 @@ def main(argv=None):
             if fact == "ask" and (not args.asks or sid in unattended_sessions):
                 continue
             key = place_in(sid, at)
-            f = found.setdefault((bisect.bisect_right(starts, at) - 1, key),
-                                 {"asks": [], "commits": [], "edits": {}, "tests": 0})
+            f = found.setdefault((bisect.bisect_right(starts, at) - 1, key), new_found())
             if fact == "ask":
                 f["asks"].append((at, value))
             elif fact == "commit":
@@ -524,7 +645,7 @@ def main(argv=None):
                             | day_seen.get(key, set()) | day_alone.get(key, set()))
             sessions = []
             for (r, b, sid), mins in mine_active.items():
-                if (r, b) != key:
+                if (r, b) != key or sid.startswith("git:"):
                     continue
                 own = within(mins)
                 if own:
@@ -538,8 +659,17 @@ def main(argv=None):
                     what.append(s["title"])
             link = links.get(key)
             default = info["default"]
-            f = found.get((index, key), {"asks": [], "commits": [], "edits": {}, "tests": 0})
+            is_default = bool(branch) and (branch == default if default else branch in ("main", "master"))
+            f = found.get((index, key)) or new_found()
             commits = list(dict.fromkeys(v for _, v in sorted(f["commits"])))
+            pr = {**{k: link[k] for k in ("number", "url", "repo", "title")}, "state": None, "isDraft": False} if link else None
+            slug = (info["slug"] or "").lower()
+            known = (gh_prs.get(((link["repo"] or slug).lower(), link["number"])) if link
+                     else gh_branches.get((slug, branch)) if slug and branch and not is_default else None)
+            if known:
+                pr = {"number": known["number"], "url": known["url"], "repo": known["repo"],
+                      "title": known["title"] or (pr or {}).get("title"), "state": known["state"],
+                      "isDraft": known["isDraft"]}
             files = {}
             for path, n in f["edits"].items():
                 rel = relative(path, root, home)
@@ -549,8 +679,8 @@ def main(argv=None):
             dirs = folders(files)
             group = {
                 "branch": branch,
-                "isDefault": bool(branch) and (branch == default if default else branch in ("main", "master")),
-                "pr": {k: link[k] for k in ("number", "url", "repo", "title")} if link else None,
+                "isDefault": is_default,
+                "pr": pr,
                 "minutes": minutes.get(key, 0),
                 "rawMin": len(day_seen.get(key, ())),
                 "unattendedMin": len(day_alone.get(key, ())),
@@ -560,6 +690,7 @@ def main(argv=None):
                 "asks": pick_asks(f["asks"], ASKS_SHOWN),
                 "commits": commits[:COMMITS_SHOWN],
                 "commitCount": len(commits),
+                "handCommits": [c for c in commits if c in f["hand"]],
                 "files": [[p, n] for p, n in top[:FILES_SHOWN]],
                 "fileCount": len(top),
                 "dirs": [[d, n] for d, n in dirs[:FOLDERS_SHOWN]],
@@ -582,8 +713,31 @@ def main(argv=None):
         for repo in ordered:
             repo["groups"].sort(key=lambda g: (-g["minutes"], -g["unattendedMin"], g["branch"]))
         out_days.append({"date": date, "totalMin": len(union), "unattendedMin": len(all_alone),
-                         "hours": hours, "repos": ordered})
-    json.dump({"today": today.isoformat(), "days": out_days, "warnings": warnings}, sys.stdout, separators=(",", ":"))
+                         "hours": hours, "repos": ordered, "reviews": reviews_by_day.get(index, []),
+                         "source": "logs"})
+
+    # 5. Finished days are kept for good once they've settled; a day whose
+    # logs Claude Code has since deleted is read back from the archive.
+    if args.archive:
+        settled = (today - datetime.timedelta(days=ARCHIVE_AFTER_DAYS)).isoformat()
+        for i, day in enumerate(out_days):
+            if day["date"] > settled:
+                continue
+            path = os.path.join(args.archive, day["date"] + ".json")
+            kept = load_json(path)
+            if kept and kept.get("totalMin", 0) > day["totalMin"]:
+                out_days[i] = from_archive(kept, excludes, args.asks)
+            elif (day["totalMin"] or day["unattendedMin"]) and kept != day:
+                save_json(path, day)
+
+    open_prs = []
+    if gh_data:
+        open_prs = sorted(({k: p[k] for k in ("repo", "number", "title", "url", "isDraft")}
+                           for p in gh_data["authored"]
+                           if p["state"] == "open" and p["repo"].lower() not in excluded_slugs_gh),
+                          key=lambda p: (p["repo"].lower(), p["number"]))
+    json.dump({"today": today.isoformat(), "days": out_days, "openPrs": open_prs, "github": gh_status,
+               "warnings": warnings}, sys.stdout, separators=(",", ":"))
     sys.stdout.write("\n")
 
 

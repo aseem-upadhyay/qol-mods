@@ -15,6 +15,7 @@ function group(branch: string, minutes: number, extra: Partial<Group> = {}): Gro
     asks: [],
     commits: [],
     commitCount: 0,
+    handCommits: [],
     files: [],
     fileCount: 0,
     dirs: [],
@@ -43,10 +44,11 @@ export const FRIDAY: Day = {
       hours: hours({ 8: 55, 9: 60, 10: 60, 11: 51, 12: 30 }),
       groups: [
         group('coach', 120, {
-          pr: { number: 2, url: 'https://github.com/me/qol-mods/pull/2', repo: 'me/qol-mods', title: 'A weekly coach' },
+          pr: { number: 2, url: 'https://github.com/me/qol-mods/pull/2', repo: 'me/qol-mods', title: 'A weekly coach', state: 'merged', isDraft: false },
           asks: ['coach report is not available in the desktop app', 'make the report cards in the desktop app'],
           commits: ['coach 0.2.0: the report as cards', 'coach 0.1.0: a weekly coach'],
           commitCount: 3,
+          handCommits: ['coach 0.1.0: a weekly coach'],
           files: [['plugins/coach/hooks/pane.tsx', 4], ['plugins/coach/hooks/art.ts', 1]],
           fileCount: 7,
           dirs: [['plugins/coach/hooks', 6], ['.', 1]],
@@ -73,9 +75,11 @@ export const FRIDAY: Day = {
       groups: [group('master', 62, { isDefault: true, what: ['Rate limit the search endpoint'] }), group('scratch', 0, { unattendedMin: 2 })],
     },
   ],
+  reviews: [{ repo: 'them/api', number: 3, title: 'Their fix', url: 'https://github.com/them/api/pull/3', at: '12:00' }],
+  source: 'logs',
 }
 
-export const empty = (date: string): Day => ({ date, totalMin: 0, unattendedMin: 0, hours: hours({}), repos: [] })
+export const empty = (date: string): Day => ({ date, totalMin: 0, unattendedMin: 0, hours: hours({}), repos: [], reviews: [], source: 'logs' })
 
 export const MONDAY: Day = {
   date: '2026-10-12',
@@ -92,10 +96,14 @@ export const MONDAY: Day = {
       groups: [group('worklog', 45, { first: '10:15', last: '11:00', what: ['Standup and worklog plugin'], spans: [[375, 420]] })],
     },
   ],
+  reviews: [],
+  source: 'logs',
 }
 
 export const FOUND: ScanResult = {
   today: '2026-10-12',
   days: [empty('2026-10-08'), FRIDAY, empty('2026-10-10'), empty('2026-10-11'), MONDAY],
+  openPrs: [{ repo: 'me/qol-mods', number: 9, title: 'Add worklog', url: 'https://github.com/me/qol-mods/pull/9', isDraft: false }],
+  github: 'ok',
   warnings: [],
 }
