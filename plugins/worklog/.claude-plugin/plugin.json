@@ -1,0 +1,61 @@
+{
+  "name": "worklog",
+  "version": "0.1.0",
+  "description": "What you worked on, day by day, from your Claude Code sessions: /standup for the last working day, /worklog for any day, grouped by repo, PR and branch with the time spent",
+  "author": { "name": "Aseem Upadhyay", "url": "https://github.com/aseem-upadhyay" },
+  "homepage": "https://github.com/aseem-upadhyay/qol-mods/tree/main/plugins/worklog",
+  "repository": "https://github.com/aseem-upadhyay/qol-mods",
+  "license": "MIT",
+  "keywords": ["standup", "worklog", "timesheet", "time", "git"],
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "idleGapMin": {
+      "type": "number",
+      "title": "Idle gap (minutes)",
+      "description": "A gap this long with nothing happening ends a stretch of work",
+      "default": 15
+    },
+    "leadInMin": {
+      "type": "number",
+      "title": "Lead-in (minutes)",
+      "description": "Time added before the first message of a stretch, for reading and thinking before you typed",
+      "default": 5
+    },
+    "maxUnattendedMin": {
+      "type": "number",
+      "title": "Claude working alone (minutes)",
+      "description": "How long after your last message Claude's work still counts as your time",
+      "default": 30
+    },
+    "dayStartsAt": {
+      "type": "string",
+      "title": "Day starts at",
+      "description": "When one day ends and the next begins, as HH:MM. Work before this counts toward the day before",
+      "default": "04:00"
+    },
+    "workDays": {
+      "type": "string",
+      "title": "Work days",
+      "description": "Comma-separated days you work, such as mon,tue,wed,thu,fri. /standup reports since the last one",
+      "default": "mon,tue,wed,thu,fri"
+    },
+    "excludeProjects": {
+      "type": "string",
+      "title": "Folders to leave out",
+      "description": "Comma-separated folder paths worklog never reads, such as private client work",
+      "default": ""
+    },
+    "includeNonRepo": {
+      "type": "boolean",
+      "title": "Count work outside repos",
+      "description": "Show sessions in folders that aren't git repos as Other",
+      "default": false
+    },
+    "includePrompts": {
+      "type": "boolean",
+      "title": "Quote your prompts",
+      "description": "Summaries quote up to three of the prompts you typed for each branch. Turn off if you paste standups where your prompts shouldn't go",
+      "default": true
+    }
+  }
+}

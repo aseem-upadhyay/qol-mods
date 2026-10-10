@@ -17,6 +17,11 @@
       "name": "coach",
       "source": "./plugins/coach",
       "description": "A weekly coach for how you use Claude Code: one habit at a time from your own sessions, tips at your level, CLAUDE.md lines and skills worth making, and your progress over the weeks"
+    },
+    {
+      "name": "worklog",
+      "source": "./plugins/worklog",
+      "description": "What you worked on, day by day, across every repo: /standup for the last work day, /worklog for any day, by PR and branch with the time spent"
     }
   ]
 }
