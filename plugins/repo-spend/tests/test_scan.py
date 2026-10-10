@@ -3,6 +3,8 @@ import json, os, subprocess, sys, tempfile, unittest
 
 SCAN = os.path.join(os.path.dirname(__file__), "..", "hooks", "scan.py")
 SLUG = "-work-demo"
+# Weeks start on a local Monday: pin the zone so they fall the same everywhere.
+ENV = {**os.environ, "TZ": "UTC"}
 
 
 def assistant(mid, model, ts="2026-01-01T00:00:00Z", **usage):
@@ -18,6 +20,7 @@ class ScanTest(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.projects = os.path.join(self.tmp.name, "projects")
         self.cache = os.path.join(self.tmp.name, "cache", "c.json")
+        self.archive = os.path.join(self.tmp.name, "data", SLUG + ".json")
 
     def tearDown(self):
         self.tmp.cleanup()
@@ -30,9 +33,23 @@ class ScanTest(unittest.TestCase):
 
     def scan(self, exclude=""):
         out = subprocess.run(
-            [sys.executable, SCAN, self.projects, SLUG, self.cache, exclude],
-            check=True, capture_output=True, text=True).stdout
+            [sys.executable, SCAN, self.projects, SLUG, self.cache, self.archive, exclude],
+            check=True, capture_output=True, text=True, env=ENV).stdout
         return json.loads(out)
+
+    def sweep(self):
+        out = subprocess.run(
+            [sys.executable, SCAN, "--sweep", self.projects,
+             os.path.dirname(self.cache), os.path.dirname(self.archive)],
+            check=True, capture_output=True, text=True, env=ENV).stdout
+        return json.loads(out)
+
+    def remove(self, folder, name):
+        os.remove(os.path.join(self.projects, folder, name))
+
+    def read_json(self, path):
+        with open(path) as fh:
+            return json.load(fh)
 
     def test_ledger_wins_and_estimates_fill_in(self):
         # Session a: Claude Code's ledger says $7, whatever the messages say.
@@ -147,6 +164,160 @@ class ScanTest(unittest.TestCase):
         r = self.scan()
         self.assertAlmostEqual(r["usd"], 12.5)
         self.assertEqual(r["since"], 1772359200000)
+
+    def test_deleted_session_moves_to_the_archive(self):
+        # Opus 5.5: 1M output = $20, 1M input = $4. Monday 2026-09-28's week.
+        self.write(SLUG, "old.jsonl", [
+            assistant("m1", "claude-opus-5-5", ts="2026-09-29T10:00:00Z",
+                      output_tokens=1_000_000, cache_read_input_tokens=7)])
+        self.write(SLUG, "old/subagents/agent-1.jsonl", [
+            assistant("m2", "claude-opus-5-5", ts="2026-09-30T10:00:00Z",
+                      input_tokens=1_000_000)])
+        self.scan()
+        self.assertFalse(os.path.exists(self.archive))  # nothing deleted yet
+
+        self.remove(SLUG, "old.jsonl")
+        self.remove(SLUG, "old/subagents/agent-1.jsonl")
+        r = self.scan()
+        self.assertAlmostEqual(r["usd"], 24.0)
+        self.assertEqual(r["sessions"], 1)
+
+        archive = self.read_json(self.archive)
+        self.assertEqual(list(archive["weeks"]), ["2026-09-28"])
+        week = archive["weeks"]["2026-09-28"]
+        self.assertAlmostEqual(week["usd"], 24.0, places=4)
+        self.assertAlmostEqual(week["estimatedUsd"], 24.0, places=4)
+        self.assertEqual(week["sessions"], 1)
+        self.assertEqual(week["tokens"], {"claude-opus-5-5": {
+            "input": 1_000_000, "output": 1_000_000, "cacheRead": 7, "cacheWrite": 0}})
+        self.assertIn("old", archive["archived"])
+        # The cache lets go of it: the archive holds it now.
+        self.assertEqual(self.read_json(self.cache)["files"], {})
+
+    def test_archive_outlives_the_cache(self):
+        self.write(SLUG, "old.jsonl", [
+            assistant("m1", "claude-opus-5-5", ts="2026-03-01T10:00:00Z", output_tokens=1),
+            {"type": "cost-state", "totalCostUSD": 21.0}])
+        self.write(SLUG, "new.jsonl", [
+            assistant("m2", "claude-sonnet-5-5", ts="2026-10-01T10:00:00Z",
+                      output_tokens=1_000_000)])
+        self.scan()
+        self.remove(SLUG, "old.jsonl")
+        self.scan()
+        os.remove(self.cache)
+        for _ in range(2):
+            r = self.scan()
+            self.assertAlmostEqual(r["usd"], 31.0)
+            self.assertAlmostEqual(r["estimatedUsd"], 10.0)
+            self.assertEqual(r["sessions"], 2)
+            self.assertEqual(r["since"], 1772359200000)
+
+    def test_a_session_spread_over_weeks_scales_to_its_ledger(self):
+        # Estimates of $20 and $4 in two weeks; the ledger says $12 in all.
+        self.write(SLUG, "a.jsonl", [
+            assistant("m1", "claude-opus-5-5", ts="2026-10-04T23:00:00Z",
+                      output_tokens=1_000_000),
+            assistant("m2", "claude-opus-5-5", ts="2026-10-07T10:00:00Z",
+                      input_tokens=1_000_000),
+            {"type": "cost-state", "totalCostUSD": 12.0}])
+        self.scan()
+        self.remove(SLUG, "a.jsonl")
+        self.assertAlmostEqual(self.scan()["usd"], 12.0)
+        weeks = self.read_json(self.archive)["weeks"]
+        self.assertEqual(list(weeks), ["2026-09-28", "2026-10-05"])
+        self.assertAlmostEqual(weeks["2026-09-28"]["usd"], 10.0)
+        self.assertAlmostEqual(weeks["2026-10-05"]["usd"], 2.0)
+        self.assertEqual(weeks["2026-09-28"]["estimatedUsd"], 0)
+        self.assertEqual(sum(w["sessions"] for w in weeks.values()), 1)
+
+    def test_a_partly_deleted_session_waits_for_the_rest(self):
+        self.write(SLUG, "a.jsonl", [
+            assistant("m1", "claude-opus-5-5", output_tokens=1_000_000)])
+        self.write(SLUG, "a/subagents/agent-1.jsonl", [
+            assistant("m2", "claude-opus-5-5", input_tokens=1_000_000)])
+        self.scan()
+        self.remove(SLUG, "a.jsonl")
+        self.assertAlmostEqual(self.scan()["usd"], 24.0)
+        self.assertFalse(os.path.exists(self.archive))
+        self.remove(SLUG, "a/subagents/agent-1.jsonl")
+        self.assertAlmostEqual(self.scan()["usd"], 24.0)
+        self.assertEqual(len(self.read_json(self.archive)["archived"]), 1)
+
+    def test_a_log_that_comes_back_counts_once(self):
+        rows = [assistant("m1", "claude-opus-5-5", output_tokens=1_000_000)]
+        self.write(SLUG, "a.jsonl", rows)
+        self.scan()
+        self.remove(SLUG, "a.jsonl")
+        self.scan()
+        self.write(SLUG, "a.jsonl", rows)  # restored from a backup, say
+        self.assertAlmostEqual(self.scan()["usd"], 20.0)
+
+    def test_previous_cache_format_moves_deleted_sessions_to_the_archive(self):
+        # A v5 cache: one folded session whose log is gone, and one log still
+        # on disk, re-read for its tokens.
+        gone = os.path.join(self.projects, SLUG, "gone.jsonl")
+        self.write(SLUG, "here.jsonl", [
+            assistant("m1", "claude-opus-5-5", ts="2026-10-01T10:00:00Z",
+                      output_tokens=1_000_000)])
+        here = os.path.join(self.projects, SLUG, "here.jsonl")
+        os.makedirs(os.path.dirname(self.cache), exist_ok=True)
+        with open(self.cache, "w") as fh:
+            json.dump({"v": 5, "files": {
+                gone: {"k": "1:1:x", "sid": "gone", "main": True, "ledger": 9.0,
+                       "gone": True, "first": 1772359200.0,
+                       "msgs": {"#total": [12.5, 1772400000.0, ""]}},
+                here: {"k": "stale-but-matching", "sid": "here", "main": True,
+                       "ledger": None, "first": 0,
+                       "msgs": {"m1": [20.0, 0, ""]}}}}, fh)
+        r = self.scan()
+        self.assertAlmostEqual(r["usd"], 29.0)
+        self.assertEqual(r["since"], 1772359200000)
+        self.assertEqual(r["sessions"], 2)
+        self.assertEqual(list(self.read_json(self.archive)["archived"]), ["gone"])
+        self.assertIn("tok", self.read_json(self.cache)["files"][here])
+
+    def test_an_unreadable_archive_is_kept_aside(self):
+        os.makedirs(os.path.dirname(self.archive))
+        with open(self.archive, "w") as fh:
+            fh.write("{not json")
+        os.makedirs(os.path.join(self.projects, SLUG))
+        self.scan()
+        kept = [n for n in os.listdir(os.path.dirname(self.archive)) if ".broken-" in n]
+        self.assertEqual(len(kept), 1)
+
+    def test_a_newer_archive_is_left_alone(self):
+        os.makedirs(os.path.dirname(self.archive))
+        with open(self.archive, "w") as fh:
+            json.dump({"v": 99}, fh)
+        os.makedirs(os.path.join(self.projects, SLUG))
+        run = subprocess.run(
+            [sys.executable, SCAN, self.projects, SLUG, self.cache, self.archive],
+            capture_output=True, text=True, env=ENV)
+        self.assertNotEqual(run.returncode, 0)
+        self.assertIn("update repo-spend", run.stderr)
+        self.assertEqual(self.read_json(self.archive), {"v": 99})
+
+    def test_sweep_archives_every_repo_once_a_day(self):
+        other = "-work-other"
+        self.write(other, "o.jsonl", [
+            assistant("m1", "claude-sonnet-5-5", output_tokens=1_000_000)])
+        self.write(other + "--claude-worktrees-x-1", "w.jsonl", [
+            assistant("m2", "claude-sonnet-5-5", output_tokens=1_000_000)])
+        self.write("-work-wt-only--claude-worktrees-y-2", "y.jsonl", [
+            assistant("m3", "claude-sonnet-5-5", output_tokens=1_000_000)])
+        self.assertEqual(self.sweep()["repos"], 2)
+        self.remove(other, "o.jsonl")
+        self.remove(other + "--claude-worktrees-x-1", "w.jsonl")
+        self.assertEqual(self.sweep()["skipped"], "swept recently")
+
+        os.utime(os.path.join(os.path.dirname(self.cache), ".last-sweep"), (0, 0))
+        self.assertEqual(self.sweep()["failed"], [])
+        archive = self.read_json(os.path.join(os.path.dirname(self.archive), other + ".json"))
+        self.assertEqual(sorted(archive["archived"]), ["o", "w"])
+        self.assertAlmostEqual(sum(w["usd"] for w in archive["weeks"].values()), 20.0)
+        # Archives only: locks and the sweep's stamp live with the cache.
+        self.assertEqual(sorted(os.listdir(os.path.dirname(self.archive))),
+                         ["-work-other.json"])
 
     def test_cache_reuse_gives_same_answer(self):
         self.write(SLUG, "a.jsonl", [

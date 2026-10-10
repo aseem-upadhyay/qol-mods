@@ -13,6 +13,15 @@ const tick = atom({ plugin: 'repo-spend', key: 'tick' } as const, 0)
 const RESCAN_MS = 2 * 60 * 1000
 const TICK_MS = 60 * 1000
 
+/**
+ * How often to offer the all-repos sweep (scan.py runs it at most once every
+ * 20 hours, whichever session asks), and how long one may take: the host's
+ * limit. The first reads every log on the machine; cut short, it keeps the
+ * repos it finished and the next one carries on from their caches.
+ */
+const SWEEP_MS = 6 * 60 * 60 * 1000
+const SWEEP_TIMEOUT_MS = 10 * 60 * 1000
+
 /** The burn rate and the sparkline both cover this window, the sparkline in SPARK_BARS bars. */
 const RATE_WINDOW_MS = 30 * 60 * 1000
 const SPARK_BARS = 10
@@ -278,6 +287,7 @@ async function record($: EngineInterface, cost: number) {
 export const register: Register = on => {
   let repoName = ''
   let scanArgs: string[] | null = null
+  let sweepArgs: string[] | null = null
   let timers: Timer[] = []
   // The session the history leaves out: the live one, whose cost comes from
   // Claude Code itself. A /clear or a resume moves it (see follow).
@@ -299,15 +309,20 @@ export const register: Register = on => {
 
     const home = (await $.env.get('HOME')) ?? ''
     const config = (await $.env.get('CLAUDE_CONFIG_DIR')) ?? `${home}/.claude`
+    // The cache can go at any time; the archive of sessions whose logs Claude
+    // Code has deleted is the only record of them, so it lives with data.
+    const cacheDir = `${home}/.cache/claude-repo-spend`
+    const dataDir = `${(await $.env.get('XDG_DATA_HOME')) || `${home}/.local/share`}/claude-repo-spend`
     const slug = slugOf(root)
+    const python = ['/usr/bin/env', 'python3', `${$.plugin.root}/hooks/scan.py`]
     scanArgs = [
-      '/usr/bin/env',
-      'python3',
-      `${$.plugin.root}/hooks/scan.py`,
+      ...python,
       `${config}/projects`,
       slug,
-      `${home}/.cache/claude-repo-spend/${slug}.json`,
+      `${cacheDir}/${slug}.json`,
+      `${dataDir}/${slug}.json`,
     ]
+    sweepArgs = [...python, '--sweep', `${config}/projects`, cacheDir, dataDir]
     liveId = await $.session.id()
     isHiddenNow = await read($, isHidden)
 
@@ -332,6 +347,19 @@ export const register: Register = on => {
         await update($, scanError, () => reason)
       }
     }
+    // Every repo's deleted logs reach its archive, not only this one's: a repo
+    // left alone for a month would otherwise lose them before it is opened.
+    const sweep = async () => {
+      if (!sweepArgs) return
+      try {
+        const run = await $.process.run(sweepArgs, { timeoutMs: SWEEP_TIMEOUT_MS })
+        if (run.exitCode !== 0 || run.stderr) {
+          $.ui.log(`repo-spend: sweep: ${run.stderr.slice(0, 300)}`, { to: 'debug' })
+        }
+      } catch (error) {
+        $.ui.log(`repo-spend: sweep failed: ${String(error)}`, { to: 'debug' })
+      }
+    }
     // A /clear (or a resume inside the session) carries on under a new session
     // id, with no session.start and a wiped $.state. The session that ended
     // joins the history, the new one becomes the live one, its samples start
@@ -347,10 +375,11 @@ export const register: Register = on => {
       await rescan()
     }
 
-    void rescan()
+    void rescan().then(sweep)
     for (const timer of timers) timer.cancel()
     timers = [
       $.clock.every(RESCAN_MS, () => void rescan()),
+      $.clock.every(SWEEP_MS, () => void sweep()),
       // The rate and the sparkline slide with the clock, not only when the cost
       // moves; the same minute catches a session change no event announced.
       $.clock.every(TICK_MS, () => void follow().then(() => update($, tick, n => n + 1))),
