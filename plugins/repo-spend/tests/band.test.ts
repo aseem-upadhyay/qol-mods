@@ -5,7 +5,8 @@ import type { Engine } from 'claude-code/testing'
 import type { History } from '../types'
 
 const SURFACES = ['terminal', 'desktop'] as const
-const HOUR = 60 * 60 * 1000
+const MINUTE = 60 * 1000
+const HOUR = 60 * MINUTE
 const DAY = 24 * HOUR
 const START = Date.UTC(2026, 9, 9, 12)
 
@@ -26,10 +27,12 @@ const ran = (exitCode: number, stdout: string, stderr = '') => ({
 
 type Setup = {
   /** What scan.py prints; a string is its stderr on a failed run instead. */
-  scan: History | string
+  scan: History | string | ((liveId: string) => History)
   cwd?: string
   /** A line another mod's band draws beneath this one; absent, only the engine's own. */
   beneath?: string
+  /** The live session, which a test may change (a /clear); 'live-session' at $0 when absent. */
+  session?: { id: string; cost: number }
 }
 
 /** Answers everything the band asks the engine for, then starts the session. */
@@ -52,14 +55,21 @@ async function boot($: Engine, on: On, surface: (typeof SURFACES)[number], setup
         : ran(128, '', 'fatal: not a git repository')
     }
     seen.scan = e.argv
-    return typeof setup.scan === 'string'
-      ? ran(127, '', setup.scan)
-      : ran(0, JSON.stringify(setup.scan))
+    if (typeof setup.scan === 'string') return ran(127, '', setup.scan)
+    // As scan.py does, the history leaves out the session named last.
+    const found = typeof setup.scan === 'function' ? setup.scan(e.argv.at(-1) ?? '') : setup.scan
+    return ran(0, JSON.stringify(found))
   })
-  on('session.id', async () => ({ value: 'live-session' }))
+  on('session.id', async () => ({ value: setup.session?.id ?? 'live-session' }))
   on('session.usage', async () => ({
-    value: { startedAt: START, context: { window: 1_000_000 }, rateLimits: [], cost: { usd: 0 } },
+    value: {
+      startedAt: START,
+      context: { window: 1_000_000 },
+      rateLimits: [],
+      cost: { usd: setup.session?.cost ?? 0 },
+    },
   }))
+  on('session.end', async (_$, e) => ({ sessionId: e.sessionId }))
   on('command.register', async () => ({ value: { command: 'repo-spend' } }))
   on('session.start', async (_$, e) => ({ cwd: e.cwd }))
   on('session.measure', async (_$, e) => ({ changed: e.changed }))
@@ -70,6 +80,7 @@ async function boot($: Engine, on: On, surface: (typeof SURFACES)[number], setup
   /** The session's running cost reaches `usd`, `msAfter` ms later. */
   const spend = async (usd: number, msAfter: number) => {
     await clock.advance(msAfter)
+    if (setup.session) setup.session.cost = usd
     await $.session.measure({
       context: { window: 1_000_000 },
       rateLimits: [],
@@ -93,7 +104,21 @@ async function boot($: Engine, on: On, surface: (typeof SURFACES)[number], setup
       },
     })
 
-  return { seen, spend, mount }
+  /**
+   * A /clear, as the engine does it: the session ends with reason "clear", the
+   * process carries on under `nextId` with its cost back at $0, and no
+   * session.start follows.
+   */
+  const clear = async (nextId: string) => {
+    if (!setup.session) throw new Error('clear() needs a setup.session')
+    const ending = setup.session.id
+    setup.session.id = nextId
+    setup.session.cost = 0
+    await $.session.end({ reason: 'clear', sessionId: ending, resume: { id: ending } })
+    await clock.advance(200)
+  }
+
+  return { seen, spend, mount, clear, clock }
 }
 
 for (const surface of SURFACES) {
@@ -218,6 +243,61 @@ for (const surface of SURFACES) {
       const ui = await mount(120)
       expect(await ui.find({ text: 'my.app' })).toBeDefined()
       expect(await ui.find({ text: 'another mod' })).toBeDefined()
+    })
+
+    test('a /clear keeps the cleared session in the total and counts the new one once', async ($, on) => {
+      // What each session's log holds; scan.py leaves out the live one.
+      const logs: Record<string, number> = { S1: 0, S2: 0 }
+      const scan = (liveId: string) => ({
+        ...HISTORY,
+        usd: 1000 + (liveId === 'S1' ? 0 : logs.S1!) + (liveId === 'S2' ? 0 : logs.S2!),
+      })
+      const session = { id: 'S1', cost: 0 }
+      const { spend, clear, mount, clock } = await boot($, on, surface, { scan, session })
+
+      await spend(3, 10 * MINUTE)
+      logs.S1 = 3
+      await clear('S2')
+      await spend(0.5, MINUTE)
+      logs.S2 = 0.5
+      await clock.advance(2 * MINUTE) // the periodic rescan
+
+      const ui = await mount(160)
+      // 1000 earlier + S1's $3 from its log + S2's $0.50 live, counted once.
+      expect(await ui.find({ text: '$1,003.50' })).toBeDefined()
+      // This session started over at the /clear, as Claude Code's own figure does.
+      expect(await ui.find({ text: '$0.50' })).toBeDefined()
+    })
+
+    test('a /clear puts the hide toggle back, as the engine wipes session state', async ($, on) => {
+      // The engine resets a session's $.state on /clear (seen in a real run);
+      // the band must write the toggle again for the new session.
+      const writes: unknown[] = []
+      on('state.set', async (_$, e, next) => {
+        if (e.plugin === 'repo-spend' && e.key === 'isHidden') writes.push(e.value)
+        return next(e)
+      })
+      const session = { id: 'S1', cost: 0 }
+      const { clear, mount } = await boot($, on, surface, { scan: HISTORY, session })
+      await $.command.run({
+        command: 'repo-spend',
+        args: '',
+        origin: { kind: 'composer' },
+        presentation: { isFullscreen: false, columns: 120 },
+      })
+      await clear('S2')
+      expect(writes).toEqual([true, true])
+      const ui = await mount(160)
+      expect(await ui.find({ text: 'this session' })).toBeUndefined()
+    })
+
+    test('a session change no event announced is caught within a minute', async ($, on) => {
+      const session = { id: 'S1', cost: 0 }
+      const { seen, clock } = await boot($, on, surface, { scan: HISTORY, session })
+      expect(seen.scan.at(-1)).toBe('S1')
+      session.id = 'S2'
+      await clock.advance(MINUTE)
+      expect(seen.scan.at(-1)).toBe('S2')
     })
 
     test('says so when python3 is missing, and still shows the session', async ($, on) => {

@@ -279,6 +279,12 @@ export const register: Register = on => {
   let repoName = ''
   let scanArgs: string[] | null = null
   let timers: Timer[] = []
+  // The session the history leaves out: the live one, whose cost comes from
+  // Claude Code itself. A /clear or a resume moves it (see follow).
+  let liveId = ''
+  // The hide toggle, kept here too: a /clear wipes the session's $.state.
+  let isHiddenNow = false
+  let follow = async () => {}
 
   on('session.start', async ($, e, next) => {
     const started = await next(e)
@@ -301,8 +307,9 @@ export const register: Register = on => {
       `${config}/projects`,
       slug,
       `${home}/.cache/claude-repo-spend/${slug}.json`,
-      await $.session.id(),
     ]
+    liveId = await $.session.id()
+    isHiddenNow = await read($, isHidden)
 
     const usage = await $.session.usage()
     await record($, usage.cost?.usd ?? 0)
@@ -310,7 +317,7 @@ export const register: Register = on => {
     const rescan = async () => {
       if (!scanArgs) return
       try {
-        const run = await $.process.run(scanArgs, { timeoutMs: 120_000 })
+        const run = await $.process.run([...scanArgs, liveId], { timeoutMs: 120_000 })
         if (run.exitCode !== 0) throw new Error(run.stderr.slice(0, 300))
         const found = JSON.parse(run.stdout) as History
         await update($, history, () => found)
@@ -325,12 +332,28 @@ export const register: Register = on => {
         await update($, scanError, () => reason)
       }
     }
+    // A /clear (or a resume inside the session) carries on under a new session
+    // id, with no session.start and a wiped $.state. The session that ended
+    // joins the history, the new one becomes the live one, its samples start
+    // over as its cost does, and the hide toggle is put back.
+    follow = async () => {
+      const id = await $.session.id()
+      if (id === liveId) return
+      liveId = id
+      $.ui.log(`repo-spend: now following session ${id}`, { to: 'debug' })
+      await update($, isHidden, () => isHiddenNow)
+      await update($, samples, () => [])
+      await record($, (await $.session.usage()).cost?.usd ?? 0)
+      await rescan()
+    }
+
     void rescan()
     for (const timer of timers) timer.cancel()
     timers = [
       $.clock.every(RESCAN_MS, () => void rescan()),
-      // The rate and the sparkline slide with the clock, not only when the cost moves.
-      $.clock.every(TICK_MS, () => void update($, tick, n => n + 1)),
+      // The rate and the sparkline slide with the clock, not only when the cost
+      // moves; the same minute catches a session change no event announced.
+      $.clock.every(TICK_MS, () => void follow().then(() => update($, tick, n => n + 1))),
     ]
 
     await $.command.register({
@@ -342,11 +365,19 @@ export const register: Register = on => {
   })
 
   on('command.run', { command: 'repo-spend' }, async $ => {
-    const hidden = await update($, isHidden, was => !was)
-    return { text: hidden ? 'Repo spend band hidden.' : 'Repo spend band shown.' }
+    isHiddenNow = await update($, isHidden, was => !was)
+    return { text: isHiddenNow ? 'Repo spend band hidden.' : 'Repo spend band shown.' }
+  })
+
+  on('session.end', async ($, e, next) => {
+    const ended = await next(e)
+    // The process goes on under another session id; it has one a moment later.
+    if (e.reason === 'clear' || e.reason === 'resume') $.clock.after(100, () => void follow())
+    return ended
   })
 
   on('session.measure', async ($, e, next) => {
+    await follow()
     if (e.cost) await record($, e.cost.usd)
     return next(e)
   })

@@ -1,6 +1,6 @@
 {
   "name": "repo-spend",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "A bar above the prompt: dollars spent on the current repo over the time your logs cover (all sessions and worktrees), and this session's live spend and burn rate",
   "author": { "name": "Aseem Upadhyay", "url": "https://github.com/aseem-upadhyay" },
   "homepage": "https://github.com/aseem-upadhyay/qol-mods/tree/main/plugins/repo-spend",

@@ -126,7 +126,11 @@ def main():
         if hit.get("first") and (not s["first"] or hit["first"] < s["first"]):
             s["first"] = hit["first"]
 
-    for slug in os.listdir(projects):
+    try:
+        slugs = os.listdir(projects)
+    except FileNotFoundError:
+        slugs = []  # a first-ever session: Claude Code has not written a log yet
+    for slug in slugs:
         # The repo's own folder and its Claude worktrees' folders.
         if not (slug == prefix or slug.startswith(prefix + "--claude-worktrees-")):
             continue

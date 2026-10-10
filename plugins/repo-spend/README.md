@@ -21,7 +21,7 @@ What your Claude Code sessions cost, per repo, live, right above the prompt.
 
 ## Features
 
-- 💰 **A running total per repo.** Every session in the repo, its Claude worktrees included, plus today and the last 7 days. It keeps counting even after Claude Code clears out old logs.
+- 💰 **A running total per repo.** Every session in the repo, its Claude worktrees included, plus today and the last 7 days. It keeps counting after Claude Code clears out old logs, and after a `/clear`.
 - 💳 **Works for API keys and subscriptions.** On an API key it shows the credits you've burned. On Pro or Max it shows what your usage would have cost at API prices, so you can see how much value you're getting from your plan.
 - 📈 **Live burn rate.** This session's cost and its pace over the last 30 minutes, with a sparkline that turns amber and then red as the pace climbs.
 - 📐 **Fits any width.** At narrower widths it drops the least important details rather than cutting the line off.
@@ -54,7 +54,7 @@ claude plugin uninstall repo-spend@qol-mods
 | **◆ repo** | The repo the session runs in. A worktree session counts toward its main checkout |
 | **last 3 months** | Every session in the repo that repo-spend knows about, plus this one. The label is how far back that reaches, from the oldest session counted, rounded up (see [how far back it goes](#how-far-back-it-goes)). **≈** means some of it is estimated (see [accuracy](#accuracy)) |
 | **today · last 7d** | The same total, for today (local time) and for the last 7 days |
-| **this session** | The live session's cost, the same figure `/cost` shows, subagents included |
+| **this session** | The live session's cost, the same figure `/cost` shows, subagents included. A `/clear` starts it over, as it does in Claude Code; the session you cleared stays in the repo's total |
 | **sparkline** | This session's spend in ten 3-minute slices covering the last 30 minutes. A full bar is at least $0.75, so small spends stay small. Drawn as SVG bars on desktop and block characters in the terminal |
 | **$/hr** | The pace over those 30 minutes: grey when idle, green under $15/hr, amber under $40/hr, red above |
 

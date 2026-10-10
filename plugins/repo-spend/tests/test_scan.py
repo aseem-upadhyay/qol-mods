@@ -125,6 +125,11 @@ class ScanTest(unittest.TestCase):
         os.remove(os.path.join(self.projects, SLUG, "a.jsonl"))
         self.assertEqual(self.scan()["since"], march_1)
 
+    def test_first_ever_session_has_no_projects_folder(self):
+        # Before Claude Code writes its first log there is no projects folder.
+        r = self.scan()
+        self.assertEqual((r["usd"], r["sessions"], r["since"]), (0, 0, None))
+
     def test_since_is_null_without_history(self):
         os.makedirs(os.path.join(self.projects, SLUG))
         self.assertIsNone(self.scan()["since"])
