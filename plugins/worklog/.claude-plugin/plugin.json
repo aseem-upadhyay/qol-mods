@@ -1,6 +1,6 @@
 {
   "name": "worklog",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "What you worked on, day by day, from your Claude Code sessions and git: /standup for the last work day or the week, /worklog for any day or a week's timesheet, by repo, PR and branch with the time spent",
   "author": { "name": "Aseem Upadhyay", "url": "https://github.com/aseem-upadhyay" },
   "homepage": "https://github.com/aseem-upadhyay/qol-mods/tree/main/plugins/worklog",
