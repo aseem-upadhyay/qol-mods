@@ -21,7 +21,7 @@ What your Claude Code sessions cost, per repo, live, right above the prompt.
 
 ## Features
 
-- 💰 **A running total per repo.** Every session in the repo, its Claude worktrees included, plus today and the last 7 days. It keeps counting after Claude Code clears out old logs, and after a `/clear`.
+- 💰 **A running total per repo.** Every session in the repo, its Claude worktrees included, plus today and the last 7 days. It keeps counting after Claude Code clears out old logs, in a weekly archive of dollars and tokens that never rolls off, and after a `/clear`.
 - 💳 **Works for API keys and subscriptions.** On an API key it shows the credits you've burned. On Pro or Max it shows what your usage would have cost at API prices, so you can see how much value you're getting from your plan.
 - 📈 **Live burn rate.** This session's cost and its pace over the last 30 minutes, with a sparkline that turns amber and then red as the pace climbs.
 - 📐 **Fits any width.** At narrower widths it drops the least important details rather than cutting the line off.
@@ -65,11 +65,15 @@ The history is re-read every 2 minutes, so other sessions open on the same repo 
 ```mermaid
 flowchart LR
     logs["Session logs<br/>~/.claude/projects/&lt;repo&gt;*"] --> scan["scan.py<br/>ledger, or tokens × list price<br/>cached by size + mtime"]
+    scan -- "once a session's logs are deleted" --> archive["Archive<br/>weekly totals, kept for good"]
+    archive --> scan
     scan -- "every 2 min" --> bar["The bar"]
     live["Claude Code<br/>this session's cost"] -- "after every turn" --> bar
 ```
 
 The live session's cost comes straight from Claude Code. Past sessions come from `hooks/scan.py`, which reads the session logs of the repo and its worktrees. A session that has Claude Code's own cost record uses it. Older sessions are priced from their token counts, and their subagents are counted too.
+
+When Claude Code deletes every log of a session, the session moves into the repo's archive: one entry per week (Monday to Sunday, local time) with its dollars, sessions and tokens per model. A session that ran across a week boundary is split by when its messages were sent. Once a day, the first session to start also sweeps every other repo on the machine, so a repo you haven't opened in a month still gets its sessions archived before their logs go.
 
 ## Requirements
 
@@ -95,7 +99,9 @@ Sessions on a subscription show what the same usage would cost at API list price
 
 The bar never says "to date". It labels the total with the window it actually covers: the age of the oldest session it counted, rounded **up** to whole days, months or years. So "last 3 months" means every session in the total happened within the last three months. History that starts 2 months and 4 days ago reads "last 3 months", because "last 2 months" would include sessions from before that window.
 
-Claude Code deletes its session logs after 30 days by default (the `cleanupPeriodDays` setting). repo-spend remembers what every session cost once it has seen it, so from the day you install it the total keeps growing instead of rolling off after a month.
+Claude Code deletes its session logs after 30 days by default (the `cleanupPeriodDays` setting). repo-spend moves every session it has seen into the repo's archive when its logs go, so from the day you install it the total keeps growing instead of rolling off after a month. That covers every repo on the machine, including ones you don't open.
+
+Archived sessions count toward the total, not toward **today** or **last 7d**, which come from the logs still on disk. With the default 30 days that makes no difference. If you set `cleanupPeriodDays` below 7, those two figures only cover what's left.
 
 Sessions deleted before you installed it can't be counted. To keep more history from now on, raise the setting in `~/.claude/settings.json`, for example `"cleanupPeriodDays": 365`.
 
@@ -103,7 +109,10 @@ Sessions deleted before you installed it can't be counted. To keep more history 
 
 - Nothing leaves your machine. There are no network calls.
 - It reads only your local session logs in `~/.claude/projects` (or `$CLAUDE_CONFIG_DIR/projects`).
-- It writes one cache file per repo under `~/.cache/claude-repo-spend/`. It holds cost figures and timestamps, never your conversations, and it's what remembers sessions after Claude Code deletes their logs. Deleting it resets the total to what's still on disk.
+- It reads the logs of every repo, not only the one you're in, once a day, to archive the ones about to be deleted.
+- It writes two files per repo, both holding cost figures, token counts and timestamps, never your conversations:
+  - `~/.cache/claude-repo-spend/<repo>.json`, a cache of the logs still on disk. It's safe to delete; it's rebuilt from the logs.
+  - `~/.local/share/claude-repo-spend/<repo>.json` (or `$XDG_DATA_HOME/claude-repo-spend`), the archive of sessions whose logs are gone. It's the only record of them: deleting it drops them from the total for good. It's plain JSON, so you can read it, back it up, or sum it yourself.
 
 <details>
 <summary><b>Development</b></summary>
@@ -134,7 +143,7 @@ When Anthropic's prices change, edit `PRICES` and `PRICES_UPDATED` in `shared/pr
 python3 scripts/sync-shared.py
 ```
 
-A new `PRICES_UPDATED` also clears the scan cache. The tests fail while `hooks/pricing.py` differs from the shared copy.
+A new `PRICES_UPDATED` re-reads every log still on disk. Archived weeks keep the prices they were counted at. The tests fail while `hooks/pricing.py` differs from the shared copy.
 
 Every change ships as a new `version` in `.claude-plugin/plugin.json`. Installed copies are cached by version, and the desktop app's sessions run that cached copy. An edit under the same version never reaches them. After committing a new version:
 

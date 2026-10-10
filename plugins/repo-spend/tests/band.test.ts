@@ -39,7 +39,7 @@ type Setup = {
 async function boot($: Engine, on: On, surface: (typeof SURFACES)[number], setup: Setup) {
   const clock = mock.clock(on, { now: START })
   mock.env(on, { HOME: '/home/me' })
-  const seen: { scan: readonly string[] } = { scan: [] }
+  const seen: { scan: readonly string[]; sweep: readonly string[] } = { scan: [], sweep: [] }
 
   // Beneath the plugin: another mod's band, or the engine's own drawing.
   on('ui.render', { component: 'AbovePrompt' }, async (below, e) => {
@@ -53,6 +53,10 @@ async function boot($: Engine, on: On, surface: (typeof SURFACES)[number], setup
       return setup.cwd === undefined
         ? ran(0, '/work/my.app/.git\n')
         : ran(128, '', 'fatal: not a git repository')
+    }
+    if (e.argv.includes('--sweep')) {
+      seen.sweep = e.argv
+      return ran(0, '{"repos": 1, "failed": []}')
     }
     seen.scan = e.argv
     if (typeof setup.scan === 'string') return ran(127, '', setup.scan)
@@ -128,7 +132,20 @@ for (const surface of SURFACES) {
       expect(seen.scan.slice(0, 2)).toEqual(['/usr/bin/env', 'python3'])
       expect(seen.scan[3]).toBe('/home/me/.claude/projects')
       expect(seen.scan[4]).toBe('-work-my-app')
-      expect(seen.scan[6]).toBe('live-session')
+      expect(seen.scan[5]).toBe('/home/me/.cache/claude-repo-spend/-work-my-app.json')
+      expect(seen.scan[6]).toBe('/home/me/.local/share/claude-repo-spend/-work-my-app.json')
+      expect(seen.scan[7]).toBe('live-session')
+    })
+
+    test('sweeps every repo into its archive after the first scan', async ($, on) => {
+      const { seen, clock } = await boot($, on, surface, { scan: HISTORY })
+      await clock.advance(0)
+      expect(seen.sweep.slice(3)).toEqual([
+        '--sweep',
+        '/home/me/.claude/projects',
+        '/home/me/.cache/claude-repo-spend',
+        '/home/me/.local/share/claude-repo-spend',
+      ])
     })
 
     test('wide: totals on the left, the live session and its burn on the right', async ($, on) => {

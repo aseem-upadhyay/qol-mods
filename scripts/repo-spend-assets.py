@@ -343,12 +343,193 @@ def layouts():
     return svg(w, h, "".join(rows), title)
 
 
+def combinations():
+    """Every state the band can be drawn in: each width on both surfaces, then
+    the history, burn, reach and pricing states one at a time. A terminal
+    strip is exactly as wide as the layout needs, so its caption's column
+    count is where that layout starts to fit (for these example figures)."""
+    pad = 14
+    rows = []
+    y = 0
+    widest = 0
+
+    def need(left, right):
+        return width(left) + 2 + width(right)
+
+    def heading(text):
+        nonlocal y
+        y += 8
+        rows.append(f'<text x="2" y="{y + 16}" fill="{CAPTION}" font-family="{SANS}" font-size="15" '
+                    f'font-weight="700">{escape(text)}</text>')
+        y += 30
+
+    def caption(text):
+        rows.append(f'<text x="2" y="{y + 14}" fill="{CAPTION}" font-family="{SANS}" font-size="13">{escape(text)}</text>')
+
+    def strip(text, left, right, cols=None):
+        nonlocal y, widest
+        cols = cols or need(left, right)
+        caption(text)
+        top = y + 22
+        sw = cols * CW + 2 * pad
+        widest = max(widest, sw)
+        rows.append(f'<rect x="0" y="{top}" width="{sw:.1f}" height="34" rx="8" fill="{BG}" stroke="{EDGE}"/>')
+        rows.append(band(pad, top + 22, cols, left, right))
+        y = top + 34 + 18
+
+    def on_desktop(parts):
+        swap = {TEXT: D_TEXT, DIM: D_DIM}
+        return [(p[0], swap.get(p[1], p[1]), *p[2:]) if len(p) > 1 else p for p in parts]
+
+    def desktop_strip(text, sw, left, right):
+        """The desktop band: `left` flows from the left edge; `right` is laid
+        from the right edge leftwards, the sparkline as 58px of SVG bars."""
+        nonlocal y, widest
+        caption(text)
+        top = y + 22
+        base = top + 25
+        widest = max(widest, sw)
+        rows.append(f'<rect x="0" y="{top}" width="{sw}" height="40" rx="12" fill="{D_PANEL}"/>')
+        rows.append(f'<text x="16" y="{base}" font-family="{SANS}" font-size="13" xml:space="preserve">'
+                    + tspans(on_desktop(left)) + "</text>")
+        # Split the right half where the sparkline sits, and lay it out from the right.
+        groups, current = [], []
+        for part in right:
+            if part[0] == "SPARK":
+                groups += [current, part]
+                current = []
+            else:
+                current.append(part)
+        groups.append(current)
+        x = sw - 16
+        for group in reversed(groups):
+            if not group:
+                continue
+            if group[0] == "SPARK":
+                x -= 58
+                rows.append(desktop_spark(x, base - 1, group[1], group[2]))
+                continue
+            text = "".join(p[0] for p in group)
+            if text.endswith(" "):
+                x -= 12
+            rows.append(f'<text x="{x:.0f}" y="{base}" text-anchor="end" font-family="{SANS}" font-size="13" '
+                        f'xml:space="preserve">' + tspans(on_desktop(strip_ends(group))) + "</text>")
+            x -= round(len(text.strip(" ")) * 7.0)
+            if text.startswith(" "):
+                x -= 12
+        y = top + 40 + 18
+
+    def lead():
+        return [("◆", CLAUDE), (" ",), ("my-app", TEXT, True), ("  ",)]
+
+    def amount(total, approx=True, unpriced=False):
+        return (([("≈", DIM)] if approx else []) + [(total, CLAUDE, True)]
+                + ([("+", LEVEL["warm"])] if unpriced else []))
+
+    def figure(value, label):
+        return [("  ·  ", DIM), (value,), (f" {label}", DIM)]
+
+    def rate_only(level="calm", rate="$6.04/hr"):
+        return [("$4.12", TEXT, True), (" this session", DIM), ("  ·  ", DIM), (rate, LEVEL[level], True)]
+
+    tiny_left = [("◆", CLAUDE), (" ",), ("≈", DIM), ("$1.28k", CLAUDE, True)]
+    tiny_right = [("$4.12", TEXT, True), (" · ", DIM), ("$6.04/hr", LEVEL["calm"], True)]
+    widths = [
+        ("Wide", "totals, today, last 7 days, the sparkline", left_full(), right_spark()),
+        ("Medium", "the 7-day figure goes first", left_medium(), right_spark()),
+        ("Compact", "short totals, the sparkline goes", left_compact(), right_compact()),
+        ("Tiny", "just the numbers", tiny_left, tiny_right),
+    ]
+
+    heading("Widths in the terminal: the richest layout that fits is drawn")
+    fit = [need(left, right) for _, _, left, right in widths]
+    ranges = [f"{fit[0]}+", f"{fit[1]}–{fit[0] - 1}", f"{fit[2]}–{fit[1] - 1}", f"under {fit[2]}"]
+    for (name, what, left, right), cols, cut in zip(widths, fit, ranges):
+        strip(f"{name}, {cut} columns: {what}", left, right, cols=max(cols, 40))
+
+    heading("Widths in the desktop app: the same cut-offs, sans text and SVG bars")
+    for (name, what, left, right), sw in zip(widths, (900, 740, 560, 300)):
+        desktop_strip(f"{name}: {what}", sw, left, right)
+
+    heading("Before the history is ready (no sparkline until it is)")
+    status = ("reading history…", DIM)
+    strip("First scan, while there is room for the repo name", lead() + [status], rate_only())
+    strip("First scan, narrower", [("◆", CLAUDE), (" ",), status], tiny_right)
+    strip("No python3 on PATH: past sessions are skipped, the live one still shows",
+          lead() + [("history unavailable: python3 not found", LEVEL["warm"])], rate_only())
+    strip("The scan failed for another reason",
+          lead() + [("history unavailable: scan failed (see claude --debug)", LEVEL["warm"])], rate_only())
+
+    heading("This session's burn over the last 30 minutes")
+    strip("The first minute: no pace or sparkline yet", left_medium(), [("$0.38", TEXT, True), (" this session", DIM)])
+    burns = [
+        ("Idle, under $0.50/hr: grey", "idle", [0, 0, 0, 0, 0, 0, 0, 0, 0, 0.01], "$0.02/hr"),
+        ("Calm, under $15/hr: green", "calm", BARS, "$6.04/hr"),
+        ("Warm, under $40/hr: amber", "warm", [0.3, 0.8, 0.5, 1.2, 0.9, 1.4, 0.7, 1.1, 1.6, 1.0], "$22.80/hr"),
+        ("Hot, $40/hr and up: red", "hot", [1.5, 2.2, 3.1, 2.4, 3.8, 2.9, 4.4, 3.6, 4.9, 4.1], "$57.10/hr"),
+    ]
+    for text, level, bars, rate in burns:
+        strip(text, left_medium(), right_spark(rate=rate, level=level, bars=bars))
+
+    heading("How far back the history reaches (rounded up)")
+    reaches = [
+        ("Under a day: today and the last 7 days would repeat the total, so they go",
+         amount("$38.20") + [(" last 24 hours", DIM)]),
+        ("Under a week: the 7-day figure goes",
+         amount("$142.60") + [(" last 3 days", DIM)] + figure("$12.30", "today")),
+        ("Up to 31 days: counted in days",
+         amount("$318.90") + [(" last 10 days", DIM)] + figure("$12.30", "today") + figure("$96.75", "last 7d")),
+        ("Up to 24 months: counted in months",
+         amount("$1,284.50") + [(" last 3 months", DIM)] + figure("$12.30", "today") + figure("$96.75", "last 7d")),
+        ("Beyond that: counted in years",
+         amount("$9,870.15") + [(" last 3 years", DIM)] + figure("$12.30", "today") + figure("$96.75", "last 7d")),
+    ]
+    for text, left in reaches:
+        strip(text, lead() + left, right_spark())
+
+    heading("Pricing")
+    tail = [(" last 3 months", DIM)] + figure("$12.30", "today") + figure("$96.75", "last 7d")
+    strip("Every model priced exactly: no ≈", lead() + amount("$1,284.50", approx=False) + tail, right_spark())
+    strip("Some of it estimated: ≈", lead() + amount("$1,284.50") + tail, right_spark())
+    strip("A model with no known price: + after the total, and the model named (wide layout only)",
+          lead() + amount("$1,284.50", unpriced=True) + tail + [("  (no price: new-model)", LEVEL["warm"])],
+          right_spark())
+
+    heading("Hidden")
+    caption("Type /repo-spend to hide the band and again to bring it back; it also steps aside while a survey shows")
+    top = y + 22
+    rows.append(f'<rect x="0.5" y="{top}" width="{widest - 1:.1f}" height="34" rx="8" fill="none" '
+                f'stroke="{EDGE}" stroke-dasharray="5 4"/>')
+    rows.append(f'<text x="{widest / 2:.0f}" y="{top + 22}" text-anchor="middle" fill="{CAPTION}" '
+                f'font-family="{SANS}" font-size="13">nothing drawn above the prompt</text>')
+    y = top + 36
+
+    w = round(widest + 2)
+    title = ("Every way repo-spend's band can look: four widths in the terminal and the desktop app, "
+             "while history loads or fails, the burn's states, how far back the history reaches, and pricing")
+    return svg(w, y, "".join(rows), title)
+
+
+def strip_ends(parts):
+    """The parts without the spaces at either end; the spacing inside stays."""
+    parts = [list(p) for p in parts]
+    while parts and not parts[0][0].strip(" "):
+        parts.pop(0)
+    while parts and not parts[-1][0].strip(" "):
+        parts.pop()
+    if parts:
+        parts[0][0] = parts[0][0].lstrip(" ")
+        parts[-1][0] = parts[-1][0].rstrip(" ")
+    return [tuple(p) for p in parts]
+
+
 if __name__ == "__main__":
     os.makedirs(OUT, exist_ok=True)
     outputs = (
         ("preview-desktop.svg", preview_desktop),
         ("preview-cli.svg", preview_cli),
         ("layouts.svg", layouts),
+        ("combinations.svg", combinations),
     )
     for name, make in outputs:
         with open(os.path.join(OUT, name), "w") as fh:
