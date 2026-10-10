@@ -9,6 +9,8 @@ export type History = {
   since: number | null
   /** Models that used tokens but have no price row: the total is a floor. */
   unpriced: string[]
+  /** The live session's share that belongs to this repo, 0 to 1: the rest went to repos it edited or worked in. */
+  live: number
 }
 
 /** One reading of this session's cost: when, and the running total. */
