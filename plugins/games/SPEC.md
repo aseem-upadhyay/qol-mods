@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | Draft, not started |
+| Status | Phase 0 done (§4.3, Appendix A); phase 1 not started |
 | Author | Aseem Upadhyay, drafted with Claude |
 | Date | 2026-10-11 |
 | Lives in | `plugins/games/` in qol-mods |
@@ -38,7 +38,7 @@ The screen shows the board, one line of score above it and one line of controls 
 ## 3. Decisions already made
 
 1. **One command, one pane.** `/games` with an optional game name. The hub and every game share one pane, `games`, which is retitled as you move between them.
-2. **Boards draw in a `Client` surface module.** It is the only element with keys, pointer and a frame clock (§4.1). It can't hold `Svg`, so boards are drawn from colored text cells.
+2. **Boards draw in a `Client` surface module.** It is the only element with keys, pointer and a frame clock (§4.1). It can't hold `Svg`, so boards are drawn from `Box` cells with background colors: one approach for every game on both surfaces (§9.3, Appendix A; the terminal is still to be seen, §4.3).
 3. **The board is a dark card in both themes.** Game colors are raw hex on the board's own background, so contrast doesn't depend on the theme. Text around the board uses theme keys.
 4. **The hooks module owns progress.** The board posts events; `register.tsx` evaluates milestones, writes `$.store`, and raises toasts. Milestones are worked out in one place only.
 5. **Writes are deltas on a fresh read.** Every store write re-reads the game's record, applies the change and writes it back in the same hook, never from a copy held in memory (§7.4).
@@ -67,24 +67,30 @@ From the 2.1.295 types:
 
 - `surface.onKey(fn)`: keys while the `Client` has focus. Escape never arrives; it returns focus to the prompt.
 - `surface.onPointer(fn)`: `down`/`move`/`up` with cell coordinates and which button.
-- `surface.every(ms, fn)`: the frame clock. Started once, while `state` is undefined.
+- `surface.every(ms, fn)`: the frame clock. Started once per instance, guarded by a module-level `WeakSet` of surfaces: the module can be called again (a resize, new props) before its first `setState`, so checking `state === undefined` alone starts the timer twice and the game runs at double speed (found in phase 0).
 - `surface.setState(next)`: local state; redraws on the next frame. Three renders in a row with no tick, key or pointer between them unmount the instance, so every `setState` follows an input or a tick.
 - `surface.post(data)`: one message per frame to the hooks module as `ui.message`. A hook answering `{ props }` hands the board new props.
 - Bounds: 20,000 nodes, 32 deep, 100,000 characters per tree; `props` at most 100,000 characters serialized.
+- `Box` `top`, `left`, `width` and `height` are whole cells: the engine refuses a fractional position.
+- The `Pane` render props carry `isFocused` and `bodyColumns`, and the pane redraws when focus changes; that is how the hooks module learns the board lost the keyboard (§7.2).
 
-### 4.3 Phase 0: things to check before building
+### 4.3 Phase 0: what was checked
 
-| # | Question | If the answer is no |
-|---|---|---|
-| P1 | Does the desktop draw `Text` `backgroundColor` inside a `Client` as solid cells with no gaps between rows? | Draw with block glyphs (`█`, `▀`, `▄`) in the foreground color instead. |
-| P2 | Can a surface module `import` sibling files (`../games/snake/logic.ts`)? | Bundle each game's logic into `board.tsx` with a build script, `scripts/games-bundle.ts`. |
-| P3 | Does `$.ui.open({ focus: true })` give the `Client` the keyboard, or does it need a click? | The board shows "Click to play" until its first pointer `down`. |
-| P4 | Is there a signal when the `Client` loses focus (Escape, a click on the prompt)? `ui.focus` in the hooks module is the first place to look. | Arcade games pause when no key has arrived for 3 seconds and the pointer has left the region. |
-| P5 | Does `surface.every(50, …)` hold close to 20 frames a second on desktop and in the terminal? | Lower the arcade games' tick rates; Dino Run and Breakout move 2 pixels a frame. |
-| P6 | How many columns and rows does a desktop side pane give at its default width? | Pick the smaller board sizes in §10 and scale up only when room allows. |
-| P7 | Does a `Client` unmount when the pane is hidden behind another tab, or keep running? | If it keeps running, arcade games pause on `ui.close` and when the pane reports `isShown: false`. |
+Phase 0 ran a throwaway mod, `games-probe`, in the desktop app on 2026-10-11, in two rounds. Each question's answer and what it changed:
 
-Phase 0 is a throwaway mod that draws a 32×16 colored grid with a moving block, logs keys and pointer events, and posts every frame. It is deleted once each answer is recorded in Appendix A.
+| # | Question | Answer | What it changes |
+|---|---|---|---|
+| P1 | Can a board draw solid, roughly square colored cells on desktop? | Not from text: the desktop draws text in a proportional font with tall lines, so a text cell is about 11×38 px and `▀` half-blocks fill only a thin strip. Yes from `Box`: a `Box` 2 columns × 1 row with a `backgroundColor` is about 31×38 px, solid, with no gaps between rows. | Boards are grids of `Box` cells (§9.3). No pixel canvas. |
+| P2 | Can a surface module `import` sibling files? | Yes. | Game logic lives in its own files, as §6.1 lays out. |
+| P3 | Does `$.ui.open({ focus: true })` give the board the keyboard? | Yes, when the prompt box is empty. Otherwise the first click does. | The board shows "Click to play" until it has received a key or a click. |
+| P4 | Is there a signal when the board loses focus? | Yes: the pane redraws with `isFocused: false`. The board's own timer keeps running regardless. | The hooks module passes `paused: true` when the pane loses focus (§7.2). |
+| P5 | Does `surface.every(50, …)` hold 20 frames a second? | Yes: 19.9–20.1 on desktop. | None. |
+| P6 | How big is a desktop side pane? | 42 columns × 45 rows at its default width; 149 columns when widened. | Every board fits 42 columns (§10). |
+| P7 | Does a hidden pane's board keep running? | Not caught in the probe. Moot: a hidden pane isn't focused, so P4 pauses it. | None. |
+| P8 | Does `position: absolute` place a `Box` inside its parent? | Not on desktop: it is placed from the board's top-left corner, ignoring the parent. | Nothing is absolutely positioned. Moving pieces are painted into the cell grid (§9.3). |
+| P9 | Which clicks reach the board? | Left button, with shift, alt and ctrl reported. Right-click never arrives. | Minesweeper flags with shift+click or `f` (§10.7). |
+
+Still open: none of this was seen in a terminal. Before 0.1.0 ships, one look at each phase 1 game in a terminal (§14).
 
 ## 5. The experience
 
@@ -127,21 +133,22 @@ Phase 0 is a throwaway mod that draws a 32×16 colored grid with a moving block,
 - **Keys:** ↑/↓ move, Enter plays, `t` opens the milestones of the selected game, `T` opens all milestones. Clicking a row plays it.
 - **Desktop:** a 20×20 `Svg` icon at the start of each row (§9.1). Terminal: a one-character colored glyph (`■` Snake, `▦` Tetris, ...).
 - **Header:** total milestones unlocked across games.
+- **Narrow panes:** the rows are flex layouts, not fixed columns. Below 50 columns (the default desktop pane is 42) the headline stat is dropped and the milestone count and marker stay.
 - **Mobile and vscode:** the same list, without the keys or the play action, and a line saying where to play.
 
 ### 5.3 A game
 
 ```
- Snake                         score 14 · best 61
-╭────────────────────────────────────────────────╮
-│                                                │
-│        ██████████                              │
-│                 ██             ●               │
-│                 ██                             │
-│                                                │
-╰────────────────────────────────────────────────╯
+ Snake                  score 14 · best 61
+▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
+▓▓▓▓▓▓▓▓██████████▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
+▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓██▓▓▓▓▓▓▓▓▓▓▓▓●●▓▓▓▓▓▓▓▓
+▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓██▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
+▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
  ←↑→↓ move · p pause · r restart · h hub
 ```
+
+`▓` is the dark board, `█` the snake, `●` the food: every cell a `Box` 2 columns wide (§9.3).
 
 - **Above the board:** the game's name on the left; on the right its live numbers (score, best; or time, mines left; or level, moves).
 - **Below the board:** one dim line of controls. It never wraps: on a narrow pane the least important controls drop off the end.
@@ -206,7 +213,7 @@ plugins/games/
   hooks/hub.tsx                   the hub and milestone views, drawn from data and callbacks (pure)
   hooks/catalog.ts                the 14 games: id, name, group, glyph, icon SVG, headline stat (pure)
   core/rng.ts                     mulberry32 with a serializable state
-  core/canvas.ts                  cell and half-block canvases, packed into runs of Text (§9.3)
+  core/canvas.ts                  the cell canvas: a frame of colors packed into rows of Box runs (§9.3)
   core/palette.ts                 board colors and each game's colors (§9.2)
   core/keys.ts                    key names to actions, shared controls (§5.3)
   core/store.ts                   record shapes, defaults, merge, migration (pure)
@@ -245,7 +252,7 @@ type BoardProps = {
   best: Record<string, number>   // what the score line shows
   unlocked: string[]             // milestone ids, for the game-over card
   justUnlocked?: string[]        // shown on the game-over card, then cleared
-  paused?: boolean               // set by turn.complete or a lost focus (§4.3 P4)
+  paused?: boolean               // set by turn.complete or the pane losing focus (§4.3 P4)
   settings: { highContrast: boolean }
   twenty?: TwentyView            // 20 Questions only
 }
@@ -268,6 +275,7 @@ type BoardProps = {
 
 - **Turn-based games** (2048, Minesweeper, Lights Out, Memory, Connect Four, Tic-tac-toe, Wordle, Hangman, 20 Questions): after every move.
 - **Arcade games** (Snake, Tetris, Breakout, Dino Run, Pong): every 2 seconds while running, and at once on pause, on `h` and on game over.
+- **Losing focus pauses.** When the pane redraws with `isFocused: false` (Escape, a click on the prompt, another pane shown), the hooks module passes `paused: true`. An arcade game pauses and saves at once; a turn-based game just saves.
 - **A finished game** clears its `save`; the next open starts fresh.
 - **Resuming:** opening a game that has a `save` restores it.
   - Turn-based games continue at once.
@@ -373,7 +381,7 @@ interface PluginState {
 
 ### 9.2 Palette
 
-- **The board:** `#1b1d23` with a one-cell border in `#2b2e37`. Colors in a game sit on it, so they're picked once for both themes.
+- **The board:** `#1b1d23`, with no border: a border would cost 2 of the pane's 42 columns, and the dark background sets the board apart. Colors in a game sit on it, so they're picked once for both themes.
 - **Text around the board:** theme keys only (`text`, `inactive`, `success`, `warning`).
 
 | Use | Color |
@@ -391,22 +399,21 @@ interface PluginState {
 
 ### 9.3 Drawing the board
 
-`core/canvas.ts` gives each game one of two canvases:
+Phase 0 settled this (§4.3 P1, P8): every board is built from `Box`es with background colors, never from text cells, and nothing is absolutely positioned.
 
-- **Cell canvas:** each cell is 2 columns × 1 row, close to a square on screen. Used by Snake, Minesweeper, Tetris (when the region has ≥ 22 rows) and Lights Out.
-- **Pixel canvas:** each terminal cell holds two square pixels, top and bottom, drawn as `▀` with the top pixel as foreground and the bottom as background. Used by Breakout, Pong, Dino Run, and Tetris on short regions.
-
-Either way a row is packed into runs: neighbouring cells with the same colors become one `Text`. A 48-column row of a typical frame comes to 5–15 nodes, so a whole board is a few hundred, far inside the 20,000 bound.
-
-Tiles (2048, Wordle, Memory, Connect Four, Tic-tac-toe) are `Box`es with a `backgroundColor` and centered text.
+- **The cell canvas** (`core/canvas.ts`): a grid of cells, each a `Box` 2 columns wide and 1 row tall, about 31×38 px on desktop. A game paints a frame into a plain array of colors; the canvas turns each row into one row `Box` of runs, neighbouring cells of the same color becoming one `Box` of width 2 × n. A row of a typical frame comes to 3–10 nodes, so a whole board is a few hundred, far inside the 20,000 bound.
+- **Moving pieces** (the snake, the ball, paddles, the dino, a falling piece) are painted into the frame like everything else. Positions are kept in fractional cells for the physics and rounded when painted, so motion is one cell at a time.
+- **Tiles** (2048, Wordle, Memory, Connect Four, Tic-tac-toe, the keyboards) are `Box`es with a `backgroundColor` and a centered bold `Text`, laid out with `gap`. Connect Four's discs and Memory's cards use `borderStyle="round"`, which the desktop draws as a rounded rectangle.
+- **Text on the board** (the pause note, the game-over card) is a centered `Box` with its own background, drawn in the frame's place for those rows, never over it.
+- **Width:** every board fits the default 42 columns, so at most 21 cells across. Bigger layouts (Minesweeper Hard, Memory 4×6) are offered only when `surface.columns` allows.
 
 ## 10. The games
 
-Each game below lists its board, controls beyond the common ones (§5.3), rules, what it saves, its headline in the hub, and its milestones. Sizes are the defaults for a pane of at least 50 columns × 22 rows; §4.3 P6 may shrink them.
+Each game below lists its board, controls beyond the common ones (§5.3), rules, what it saves, its headline in the hub, and its milestones. Board sizes are in cells of the cell canvas (2 columns × 1 row each) and fit the default 42-column pane (§4.3 P6).
 
 ### 10.1 Snake
 
-- **Board:** 22×13 cells on the cell canvas (44 × 13 columns and rows).
+- **Board:** 20×14 cells (40 columns × 14 rows).
 - **Controls:** arrows or WASD. A reverse into yourself is ignored.
 - **Rules:**
   - The snake starts 3 long, moving right. Eating food grows it by 1 and scores 1.
@@ -427,7 +434,7 @@ Each game below lists its board, controls beyond the common ones (§5.3), rules,
 
 ### 10.2 Tetris
 
-- **Board:** 10×20, on the cell canvas when the region has ≥ 22 rows, else the pixel canvas. A next-piece box sits beside it, and the level beside that.
+- **Board:** 10×20 cells (20 columns × 20 rows). The next piece, the held piece and the level sit in a column 5 cells wide beside it.
 - **Controls:**
   - ←→ move, ↓ soft drop, space hard drop
   - ↑ or `x` rotate clockwise, `z` counter-clockwise
@@ -451,13 +458,13 @@ Each game below lists its board, controls beyond the common ones (§5.3), rules,
 
 ### 10.3 Breakout
 
-- **Board:** 48×28 pixels (48 columns × 14 rows): 6 rows of 8 bricks, a paddle 8 pixels wide.
+- **Board:** 20×16 cells: 5 rows of 10 bricks, each brick 2 cells wide; a paddle 4 cells wide; a ball of 1 cell.
 - **Controls:** ←→ or the mouse (the paddle follows the pointer's column). Space launches.
 - **Rules:**
   - 3 lives. The ball speeds up at 4 and 12 hits and when it first reaches the top rows.
   - Where the ball hits the paddle sets its angle.
   - Levels 1–5 have their own brick layouts and loop after level 5, a little faster each time.
-  - Top-row bricks are worth 7, the next two rows 5 and 3, the rest 1.
+  - Top-row bricks are worth 7, the next two rows 5 and 3, the last two 1.
 - **Saves:** bricks, ball, paddle, lives, level, score, rng.
 - **Headline:** best score.
 
@@ -472,10 +479,10 @@ Each game below lists its board, controls beyond the common ones (§5.3), rules,
 
 ### 10.4 Dino Run
 
-- **Board:** 64×24 pixels (64 columns × 12 rows), the ground 4 pixels from the bottom.
+- **Board:** 21×10 cells, the ground on the bottom row. The dino is 1 cell wide and 2 tall (1 tall ducking); cacti are 1 cell wide and 1–2 tall; a bird is 1 cell.
 - **Controls:** space or ↑ jump (hold for a higher jump), ↓ duck. A click anywhere on the board jumps.
 - **Rules:**
-  - The ground scrolls left, starting at 1 pixel a frame and gaining speed over time.
+  - The ground scrolls left one cell a step, starting at 8 steps a second and gaining speed over time, up to 20.
   - Cacti come in 1–3; birds start at 400 points and fly at three heights.
   - Score is distance, about 10 a second at the start.
   - At 700 the board's colors invert for 100 points ("night"), then every 700 after that.
@@ -493,7 +500,7 @@ Each game below lists its board, controls beyond the common ones (§5.3), rules,
 
 ### 10.5 Pong
 
-- **Board:** 48×28 pixels, a paddle at each side, a dotted net down the middle.
+- **Board:** 21×13 cells, a paddle 1 cell wide and 3 tall at each side, a 1-cell ball, a dotted net down the middle column.
 - **Controls:** ↑↓ or `w`/`s`, or the mouse. You play the left paddle against the bot.
 - **Rules:**
   - First to 7.
@@ -536,9 +543,9 @@ Each game below lists its board, controls beyond the common ones (§5.3), rules,
 
 ### 10.7 Minesweeper
 
-- **Board:** Easy 9×9 with 10 mines, Medium 16×16 with 40, on the cell canvas. Hard (30×16, 99 mines) is offered only when the region has at least 62 columns.
+- **Board:** Easy 9×9 with 10 mines, Medium 16×16 with 40. Hard (30×16, 99 mines) is offered only when the region has at least 62 columns.
 - **Controls:**
-  - Click to reveal, right-click to flag.
+  - Click to reveal, shift+click to flag. Right-click never reaches the board (§4.3 P9).
   - Click a satisfied number to chord.
   - Keys: arrows move a cursor, space reveals, `f` flags.
   - `1` `2` `3` pick a difficulty before the first click.
@@ -581,7 +588,7 @@ Each game below lists its board, controls beyond the common ones (§5.3), rules,
 
 ### 10.9 Memory
 
-- **Board:** 4×4 cards (8 pairs), each 6 columns × 3 rows. 4×6 (12 pairs) is offered when the region allows.
+- **Board:** 4×4 cards (8 pairs), each 6 columns × 3 rows. 6 across × 4 down (12 pairs) is offered when the region has at least 41 columns.
 - **Controls:** click a card, or arrows and space.
 - **Rules:**
   - Flip two cards. A match stays face up; a miss turns back after 0.8 seconds.
@@ -639,7 +646,7 @@ Each game below lists its board, controls beyond the common ones (§5.3), rules,
 
 ### 10.12 Wordle
 
-- **Board:** 6 rows of 5 tiles, each 3 columns × 1 row with 1-column gaps. A 3-row on-screen keyboard shows each letter's best state.
+- **Board:** 6 rows of 5 tiles, each 3 columns × 1 row with 1-column gaps. A 3-row on-screen keyboard, keys 3 columns wide with 1-column gaps (39 columns for the top row), shows each letter's best state.
 - **Controls:** type letters, Backspace, Enter. Clicking the on-screen keyboard works too. `n` starts a practice game.
 - **Rules:**
   - Standard Wordle.
@@ -772,14 +779,14 @@ These live in the `profile` record's own `milestones`, and show at the top of th
 
 | Phase | Ships | Contents |
 |---|---|---|
-| 0 | nothing | The platform checks of §4.3; answers in Appendix A |
-| 1 | 0.1.0 | Hub, store, milestones, saves, settings, commands; Snake, 2048, Minesweeper, Wordle |
+| 0 | nothing | Done 2026-10-11: the platform checks of §4.3, measurements in Appendix A |
+| 1 | 0.1.0 | Hub, store, milestones, saves, settings, commands; Snake, 2048, Minesweeper, Wordle; one look at each in a terminal before release |
 | 2 | 0.2.0 | Lights Out, Memory, Connect Four, Tic-tac-toe, Hangman |
 | 3 | 0.3.0 | Tetris, Breakout, Dino Run, Pong; `notifyTurnEnd` pausing; the long-turn line |
 | 4 | 0.4.0 | 20 Questions; the "Coffee break" milestone |
 | Later | — | Sound on milestones (`$.audio.play`, off by default); the mobile app once it can draw a `Client`; a "You ask" mode for 20 Questions |
 
-Phase 1's four games cover both canvases, keys, the pointer, the frame clock, words and every kind of save, so later phases add games without new framework.
+Phase 1's four games cover the cell canvas, tiles, keys, the pointer, the frame clock, words and every kind of save, so later phases add games without new framework.
 
 ## 15. Open questions
 
@@ -789,4 +796,25 @@ Phase 1's four games cover both canvases, keys, the pointer, the frame clock, wo
 
 ## Appendix A. Phase 0 results
 
-To be filled in from §4.3: each question, what was seen on terminal and desktop, and the decision taken.
+The answers and decisions are in §4.3. These are the measurements behind them, all from the desktop app (Claude Code 2.1.295) with the probe docked in a side pane. Pixel sizes are from Retina screenshots, so they are twice CSS pixels.
+
+**Round 1: text cells, keys, pointer, clock.**
+
+- Viewport 106×52; pane body 42×45, docked; `Client` region 42×23.
+- Frame clock at `every(50)`: 30 one-second samples between 19.9 and 20.1 ticks a second.
+- Keys arrived before any click (arrows), and after one (arrows, letters).
+- Pointer: `enter`, `leave`, `down`, `up`, `move`; button `left` only; no `fine` position.
+- Focus: Escape left the pane with `isFocused: false` and a redraw; the board's timer ticked 49 more times, unpaused. A click back raised `ui.focus` with origin `person`.
+- A text cell of two spaces on a background color: about 11 px wide and 38 px tall per column pair, since the desktop's text is proportional. `▀` with a foreground and a background color drew as a thin strip of the foreground at the top of a full-height background, not two half-cells.
+- `import` from a sibling file inside a surface module: worked.
+- In the test kit, the module was called twice before its first `setState`, starting two timers (40 ticks in a second); a `WeakSet` guard fixed it.
+
+**Round 2: Box cells, sprites, tiles.**
+
+- A `Box` 2 columns × 1 row with a `backgroundColor`: about 31×38 px, solid, rows touching with no gap.
+- A tile `Box` 7 columns × 3 rows with centered bold text: about 111×114 px. Letter tiles 3×1, a `round` border: drawn as expected, the border with rounded corners.
+- `position="absolute"` children of a `position="relative"` board were placed from the `Client` region's top-left corner, over the rows above the board, not inside it.
+- A fractional `top` (2.5) was refused by the engine: positions are whole cells.
+- shift+click arrived as `down`/`up` with `shift: true`; right-click arrived as nothing.
+
+The probe was a throwaway mod outside the repo and was deleted after these were recorded.
