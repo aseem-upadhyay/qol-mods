@@ -11,28 +11,11 @@ Thirteen games you already know in a side pane, with milestones to chase and you
 
 </div>
 
-```
-Games                                ★ 9 of 83
-Arcade
-▸ ■ Snake            best 61   ★ 2/6  ● resume
-  ▦ Tetris           best 12,400 ★ 3/7
-  ▤ Breakout         best 640  ★ 2/6
-  ♣ Dino Run         best 1,204 ★ 3/6
-  ▮ Pong             3 wins    ★ 2/6
-Puzzles
-  ◆ 2048             best 2,048 ★ 1/8
-  ✸ Minesweeper      best 0:48 ★ 1/7
-  ◼ Lights Out       level 14  ★ 2/6
-  ♠ Memory           best 22 flips ★ 1/6
-Versus
-  ● Connect Four     5 wins    ★ 2/6
-  ✕ Tic-tac-toe      4W 6D     ★ 3/5
-Words
-  ▣ Wordle           streak 6  ★ 0/8  ● today
-  ☐ Hangman          18 solved ★ 2/6
+<img src="assets/preview-desktop.svg" alt="The Claude desktop app. On the left Claude is at work: it read and edited the upload client and is running the tests. Docked on the right, the games pane shows a Tetris game: a T piece falling over its ghost toward a stack with a gap, the next and held pieces beside the well, level 2, 18 lines, a score of 4,804 against a best of 12,400, and the controls on one line below." width="100%">
+<p><sub>In the Claude desktop app, while Claude works</sub></p>
 
-↑↓ choose · ⏎ play · t milestones · T all · q close
-```
+<img src="assets/preview-cli.svg" alt="A Claude Code terminal after /games. Above the prompt, the pane lists all thirteen games, each with a colored glyph, its best score or streak, and its milestones so far: Snake best 61 with a game to resume, Tetris best 12,400, 2048 best 23,640, Wordle on a 6-day streak with today's puzzle waiting, and the rest. The keys to choose, play and see milestones are on the last line." width="100%">
+<p><sub>In the terminal (<code>claude</code>): the list of games, with your bests and milestones</sub></p>
 
 ## Features
 
@@ -45,6 +28,9 @@ Words
 - 🔀 **Parallel sessions are fine.** Two sessions playing at once add to each other's stats instead of overwriting them.
 - 🏁 **See how it ended.** A finished board stays on screen, with the result on the line below it.
 - 🔒 **All local.** Nothing is sent anywhere; no game calls a model.
+
+<img src="assets/preview-games.svg" alt="Six of the games as the pane draws them. Tetris: a stack with a gap and a T piece above its ghost. 2048: a 2048 tile made, scoring 23,640. Wordle: today's puzzle, ARISE and CRAMP tried, A and R yellow then C, R and A green, CRA typed on the third row, the keyboard colored below. Snake: fifteen long, food ahead. Minesweeper: an easy board half open, numbers in color, two flags placed, 41 seconds in. Connect Four: red has four on a diagonal against the Normal bot, and the line under the board says You win! with r: again and h: hub." width="100%">
+<p><sub>Six of the thirteen, as the pane draws them</sub></p>
 
 ## Install
 
@@ -122,3 +108,5 @@ Wordle's answers are 2,011 common five-letter words, and Hangman's 404 coding wo
 - The desktop app's Code tab or a terminal. The mobile app and the VS Code extension show your stats but can't draw the board.
 
 One more is on the way, 20 Questions with Claude: [SPEC.md](SPEC.md) has the plan.
+
+The images in `assets/` are drawn by `scripts/games-assets.py` from made-up positions, through each game's own drawing code; it needs [bun](https://bun.sh) to run it.
