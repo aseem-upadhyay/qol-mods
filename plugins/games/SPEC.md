@@ -867,6 +867,7 @@ What changed from the plan while building it:
 - **Results sit under the board** (§5.3). A card over the middle hid what mattered in the new games: the winning four, the last Hangman word, where the mines were. The finished board stays bright and the controls line becomes the result, for every game.
 - **Milestones get the game's time.** The hooks module adds `seconds`, from the board's clock, to an ended game's facts, so Memory's "Speedy" needs no timer of its own.
 - **Hangman deals from a counter** instead of a saved set of used words (§10.13), and its 404 words were written for this mod.
+- **Played in a terminal** (Claude Code 2.1.296, started with `--plugin-dir`, the pane docked about 75 columns wide): Snake, Minesweeper, Connect Four and Hangman games recorded, into the same store as the desktop app's, so progress carries between them. The hub drew whole there.
 - **Connect Four's Hard looks 7 moves ahead**, not 8 (§10.10).
 - **Memory has no rounded borders:** a border inside a card 2 rows tall leaves no room for its face. Cards are colored blocks.
 - The hub's milestone total is 58 across the nine games. In a terminal's inline pane the hub takes 16 of its 17 rows.
