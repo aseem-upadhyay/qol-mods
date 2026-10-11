@@ -29,6 +29,11 @@ export async function boot($: Engine, on: On, surface: Surface, store: Record<st
     return { value: undefined }
   })
   on('session.start', async (_$, e) => ({ cwd: e.cwd }))
+  // Beneath the plugin, a turn's start and end as the engine answers them.
+  on('turn.start', async (_$, e) => ({ turnId: e.turnId }) as never)
+  on('turn.complete', async (_$, e) => ({ text: e.answer }))
+  // Beneath the plugin, the band as the engine draws it.
+  on('ui.render', { component: 'AbovePrompt' }, async () => ({ type: 'engine', ref: 0 }) as never)
   on('ui.toast', async (_$, e) => {
     seen.toasts.push(e.text)
     return { value: undefined }

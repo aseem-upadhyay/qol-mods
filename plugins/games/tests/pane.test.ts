@@ -16,22 +16,23 @@ describe('/games arguments', () => {
     expect(parse('reset wordle').screen).toBe('reset:wordle')
     expect(parse('reset all').screen).toBe('reset:all')
     expect(parse('snak').toast).toBe('No game called "snak". Did you mean Snake?')
-    expect(parse('tetris').toast).toBe('No game called "tetris".')
+    expect(parse('tetris').screen).toBe('game:tetris')
+    expect(parse('questions').toast).toBe('No game called "questions".')
   })
 })
 
 for (const surface of SURFACES) {
   describe(surface, () => {
-    test('/games opens the hub on the nine games', async ($, on) => {
+    test('/games opens the hub on the thirteen games', async ($, on) => {
       const { run, pane, seen } = await boot($, on, surface)
       expect((await run()).text).toBe('Opened games.')
       expect(seen.opened).toBe(1)
       const ui = await pane()
-      for (const name of ['Snake', '2048', 'Minesweeper', 'Lights Out', 'Memory', 'Connect Four', 'Tic-tac-toe', 'Wordle', 'Hangman']) {
+      for (const name of ['Snake', 'Tetris', 'Breakout', 'Dino Run', 'Pong', '2048', 'Minesweeper', 'Lights Out', 'Memory', 'Connect Four', 'Tic-tac-toe', 'Wordle', 'Hangman']) {
         expect(await ui.find({ type: 'Text', text: new RegExp(` ${name}$`), ...IN })).toBeDefined()
       }
-      expect(await ui.find({ type: 'Text', text: '★ 0 of 58', ...IN })).toBeDefined()
-      expect(await ui.findAll({ type: 'Text', text: /New/, ...IN })).toHaveLength(9)
+      expect(await ui.find({ type: 'Text', text: '★ 0 of 83', ...IN })).toBeDefined()
+      expect(await ui.findAll({ type: 'Text', text: /New/, ...IN })).toHaveLength(13)
     })
 
     test('enter on a hub row opens that game, h goes back', async ($, on) => {
@@ -41,7 +42,7 @@ for (const surface of SURFACES) {
       await ui.key({ key: 'down', ...IN })
       await ui.key({ key: 'return', ...IN })
       expect(await ui.find({ type: 'Text', text: /^score 0 · best 0$/, ...IN })).toBeDefined()
-      expect(await ui.find({ type: 'Text', text: '2048', ...IN })).toBeDefined()
+      expect(await ui.find({ type: 'Text', text: 'Tetris', ...IN })).toBeDefined()
       await ui.key({ key: 'h', ...IN })
       expect(await ui.find({ type: 'Text', text: 'Games', ...IN })).toBeDefined()
     })
@@ -57,7 +58,7 @@ for (const surface of SURFACES) {
       await ui.key({ key: 'h', ...IN })
       await clock.settle()
       await ui.redraw()
-      expect(await ui.findAll({ type: 'Text', text: /New/, ...IN })).toHaveLength(8)
+      expect(await ui.findAll({ type: 'Text', text: /New/, ...IN })).toHaveLength(12)
       // Down from the middle row hits the bottom wall in 7 moves: no food on the way makes 0.
       expect(await ui.find({ type: 'Text', text: /best \d/, ...IN })).toBeDefined()
       expect(seen.toasts.every(t => t.startsWith('★ Snake'))).toBe(true)
@@ -154,7 +155,7 @@ for (const surface of SURFACES) {
 
     test('every board fits the pane', async ($, on) => {
       const { run, pane } = await boot($, on, surface)
-      for (const game of ['snake', '2048', 'mines', 'lights', 'memory', 'connect4', 'tictactoe', 'wordle', 'hangman']) {
+      for (const game of ['snake', 'tetris', 'breakout', 'dino', 'pong', '2048', 'mines', 'lights', 'memory', 'connect4', 'tictactoe', 'wordle', 'hangman']) {
         await run(game)
         const ui = await pane()
         await ui.resize({ columns: surface === 'desktop' ? 42 : 87, rows: surface === 'desktop' ? 45 : 17, in: 'board' })

@@ -4,7 +4,7 @@
 
 **A quick game while Claude works.**
 
-Nine games you already know in a side pane, with milestones to chase and your progress saved between sessions.
+Thirteen games you already know in a side pane, with milestones to chase and your progress saved between sessions.
 
 [![Claude Code plugin](https://img.shields.io/badge/Claude%20Code-plugin-D97757?style=flat-square)](#install)
 [![License: MIT](https://img.shields.io/badge/license-MIT-2ea44f?style=flat-square)](../../LICENSE)
@@ -12,9 +12,13 @@ Nine games you already know in a side pane, with milestones to chase and your pr
 </div>
 
 ```
-Games                                ★ 9 of 58
+Games                                ★ 9 of 83
 Arcade
 ▸ ■ Snake            best 61   ★ 2/6  ● resume
+  ▦ Tetris           best 12,400 ★ 3/7
+  ▤ Breakout         best 640  ★ 2/6
+  ♣ Dino Run         best 1,204 ★ 3/6
+  ▮ Pong             3 wins    ★ 2/6
 Puzzles
   ◆ 2048             best 2,048 ★ 1/8
   ✸ Minesweeper      best 0:48 ★ 1/7
@@ -32,11 +36,11 @@ Words
 
 ## Features
 
-- 🎮 **Nine games you already know.** Snake; 2048, Minesweeper, Lights Out and Memory; Connect Four and Tic-tac-toe against a bot; Wordle and Hangman. Played with the arrow keys or the mouse, with one line of score above the board and one line of controls below it, and nothing else.
-- ★ **Milestones.** 58 small goals across the games, from "eat once" to "beat Connect Four on Hard three times in a row". A toast says when you get one, and each shows how close you are: "12 of 25".
+- 🎮 **Thirteen games you already know.** Snake, Tetris, Breakout, Dino Run and Pong; 2048, Minesweeper, Lights Out and Memory; Connect Four and Tic-tac-toe against a bot; Wordle and Hangman. Played with the arrow keys or the mouse, with one line of score above the board and one line of controls below it, and nothing else.
+- ★ **Milestones.** 83 small goals across the games, from "eat once" to "beat Connect Four on Hard three times in a row". A toast says when you get one, and each shows how close you are: "12 of 25".
 - 💾 **Progress that stays.** Bests, streaks, milestones and the game you left halfway are kept between sessions. Arcade games come back paused, right where you left them.
 - 📅 **A daily Wordle.** One puzzle a day, the same all day, with a daily streak; practice games as many as you like.
-- ⏸️ **Out of the way.** Typing in the prompt, or Claude starting or finishing a turn, pauses an arcade game. A toast says when Claude is done.
+- ⏸️ **Out of the way.** Typing in the prompt, or Claude starting or finishing a turn, pauses an arcade game. A toast says when Claude is done. Turn on **Suggest a game during long turns** for one line above the prompt when Claude has been working a minute.
 - 🖥️ **At home on both.** In the desktop app the pane sits beside the conversation; in the terminal it fits the strip above the prompt, with smaller tiles where it has to.
 - 🔀 **Parallel sessions are fine.** Two sessions playing at once add to each other's stats instead of overwriting them.
 - 🏁 **See how it ended.** A finished board stays on screen, with the result on the line below it.
@@ -68,7 +72,7 @@ Answer `y` to add the marketplace and pick the **user** scope.
 
 | Key | In every game |
 | --- | --- |
-| **p** | Pause (arcade games and Minesweeper) |
+| **p** | Pause (Snake, Tetris, Breakout, Dino Run, Pong and Minesweeper) |
 | **r** | New game; asks first if one is under way |
 | **h** | Back to the list |
 | **t** | This game's milestones |
@@ -82,6 +86,10 @@ When a game ends, the line under the board has the result and two buttons, **r**
 | Game | Controls |
 | --- | --- |
 | Snake | Arrows or WASD. Starts on your first key; speeds up as it grows |
+| Tetris | ←→ move, ↑ or **x** rotate (**z** the other way), ↓ soft drop, space hard drop, **c** hold. Starts on your first key |
+| Breakout | ←→ or the mouse moves the paddle; space or a click launches. Where the ball lands on the paddle sets its angle. Three lives |
+| Dino Run | Space or ↑ jumps, ↓ ducks; a click jumps too. Faster the farther you get |
+| Pong | ↑↓ or the mouse moves your paddle. **1** **2** **3** for Easy, Normal or Hard before the serve; first to 7 |
 | 2048 | Arrows or WASD, or drag across the board |
 | Minesweeper | Click to reveal, shift+click (or **f**) to flag, click a satisfied number to open around it. Arrows and space work too. **1** **2** **3** pick the size before your first click; Medium and Hard show only where they fit |
 | Lights Out | Click a light, or arrows and space. Each press flips it and its neighbours; turn them all off. **u** undoes; **r** after a clear goes to the next level |
@@ -98,6 +106,7 @@ Open `/config` and find games, or set them under `pluginConfigs.games.options` i
 | Setting | Default | |
 | --- | --- | --- |
 | Tell me when Claude finishes | on | A toast when Claude finishes a turn while a game is open, and an arcade game pauses |
+| Suggest a game during long turns | off | A minute into a turn with no game open, one line above the prompt: `/games dino` for a quick run |
 | High contrast colors | off | Orange and blue in Wordle instead of green and yellow |
 | Wordle hard mode | off | Hints you've found must be used in later guesses |
 
@@ -112,4 +121,4 @@ Wordle's answers are 2,011 common five-letter words, and Hangman's 404 coding wo
 - Claude Code with mod (hooks module) support
 - The desktop app's Code tab or a terminal. The mobile app and the VS Code extension show your stats but can't draw the board.
 
-More games are on the way (Tetris, Breakout, Dino Run, Pong and 20 Questions): [SPEC.md](SPEC.md) has the plan.
+One more is on the way, 20 Questions with Claude: [SPEC.md](SPEC.md) has the plan.

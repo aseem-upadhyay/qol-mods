@@ -17,11 +17,12 @@ const records = atom({ plugin: 'games', key: 'records' } as const, { profile: {}
 const request = atom({ plugin: 'games', key: 'request' } as const, { screen: 'hub', n: 0 } as Request)
 const pauseSignal = atom({ plugin: 'games', key: 'pause' } as const, 0)
 const ack = atom({ plugin: 'games', key: 'ack' } as const, { inst: '', id: 0 } as Ack)
+const band = atom({ plugin: 'games', key: 'band' } as const, false)
 
 /** The last post handled from each board instance (Batch). */
 const handled = new Map<string, number>()
 
-type Config = Settings & { notifyTurnEnd: boolean }
+type Config = Settings & { notifyTurnEnd: boolean; suggestDuringLongTurns: boolean }
 
 function configFrom(options: PluginOptions): Config {
   const o = options as Record<string, unknown>
@@ -30,11 +31,26 @@ function configFrom(options: PluginOptions): Config {
     highContrast: o.highContrast === true,
     wordleHardMode: o.wordleHardMode === true,
     notifyTurnEnd: o.notifyTurnEnd !== false,
+    suggestDuringLongTurns: o.suggestDuringLongTurns === true,
   }
 }
 
 /** What this session knows of the pane: whether it's open and what it shows. */
 const pane = { isOpen: false, screen: 'hub' as Screen, lastPause: 0 }
+
+/** The turn running now, and its timer for the long-turn line (SPEC.md §5.5). */
+const turn: { id: string; timer?: { cancel: () => void } } = { id: '' }
+
+/** A minute into a turn with no game open: offer one, once for this turn. */
+async function offerGame($: EngineInterface, turnId: string) {
+  if (turn.id !== turnId || pane.isOpen) return
+  await update($, band, () => true)
+}
+
+async function hideOffer($: EngineInterface) {
+  if (await read($, band)) await update($, band, () => false)
+}
+
 
 const nameOf = (id: GameId) => CATALOG.find(e => e.id === id)?.name ?? id
 
@@ -145,6 +161,7 @@ async function open($: EngineInterface, screen: Screen) {
   await update($, request, r => ({ screen, n: r.n + 1 }))
   const opened = await $.ui.open({ id: PANE, title: 'Games', focus: true, rows: 19 })
   pane.isOpen = opened.isPlaced || pane.isOpen
+  await hideOffer($)
 
   return opened
 }
@@ -185,7 +202,7 @@ export const register: Register = (on, options) => {
   on('session.start', async ($, e, next) => {
     await $.command.register({
       name: 'games',
-      description: 'Play a game in a side pane: Snake, 2048, Minesweeper, Lights Out, Memory, Connect Four, Tic-tac-toe, Wordle, Hangman',
+      description: 'Play a game in a side pane: Snake, Tetris, Breakout, Dino Run, Pong, 2048, Minesweeper, Lights Out, Memory, Connect Four, Tic-tac-toe, Wordle, Hangman',
       argumentHint: '[game]',
       immediate: true,
     })
@@ -283,6 +300,26 @@ export const register: Register = (on, options) => {
     return next(e)
   })
 
+  // A minute into a turn: one line above the prompt, stacked over any other mod's (SPEC.md §5.5).
+  on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
+    const beneath = await next(e)
+    if (e.props.hasSurvey || !(await read($, band))) return beneath
+    const below = beneath.type === 'engine' ? null : beneath
+    if (below && e.props.maxRows < 2) return beneath
+    const { Box, Text } = $.ui.resolve(e)
+
+    return (
+      <Box flexDirection="column" width="100%">
+        <Box flexDirection="row">
+          <Text dimColor>Claude is still working · </Text>
+          <Text bold>/games dino</Text>
+          <Text dimColor> for a quick run</Text>
+        </Box>
+        {below}
+      </Box>
+    )
+  })
+
   // The player doing something else pauses an arcade game (SPEC.md §7.2).
   on('prompt.edit', ($, e, next) => {
     void signalPause($).catch(() => {})
@@ -296,11 +333,21 @@ export const register: Register = (on, options) => {
   })
   on('turn.start', ($, e, next) => {
     void signalPause($).catch(() => {})
+    turn.timer?.cancel()
+    turn.id = e.turnId
+    if (config.suggestDuringLongTurns && !pane.isOpen) {
+      const id = e.turnId
+      turn.timer = $.clock.after(60_000, () => void offerGame($, id).catch(() => {}))
+    }
 
     return next(e)
   })
   on('turn.complete', async ($, e, next) => {
     const done = await next(e)
+    turn.timer?.cancel()
+    turn.timer = undefined
+    turn.id = ''
+    await hideOffer($).catch(() => {})
     if (pane.isOpen && pane.screen.startsWith('game:')) {
       void signalPause($).catch(() => {})
       if (config.notifyTurnEnd) $.ui.toast('Claude finished')

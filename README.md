@@ -30,7 +30,7 @@ How much have you burned on this repo, and how much value are you getting from y
 
 ### [games](plugins/games)
 
-A quick game while Claude works. `/games` opens Snake, 2048, Minesweeper, Lights Out, Memory, Connect Four, Tic-tac-toe, Wordle or Hangman in a side pane, with milestones to chase and your progress saved between sessions. Arcade games pause when you type in the prompt or Claude finishes a turn.
+A quick game while Claude works. `/games` opens one of thirteen games in a side pane (Snake, Tetris, Breakout, Dino Run, Pong, 2048, Minesweeper, Lights Out, Memory, Connect Four, Tic-tac-toe, Wordle, Hangman), with milestones to chase and your progress saved between sessions. Arcade games pause when you type in the prompt or Claude finishes a turn.
 
 ```
 /plugin install games --marketplace aseem-upadhyay/qol-mods

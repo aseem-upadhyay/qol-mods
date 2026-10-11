@@ -48,6 +48,8 @@ export type GameDef<S> = {
   kind: 'arcade' | 'turn'
   /** A turn game with a running clock (Minesweeper): it pauses like an arcade game. */
   isTimed?: boolean
+  /** The game follows the pointer with no button held (a paddle under the mouse). */
+  wantsHover?: boolean
   /** Letters are the game's input (Wordle): the common commands take shift (H, T, Q, N). */
   isWordy?: boolean
   /** Best keys where lower is better ('time.easy', 'guesses'). */

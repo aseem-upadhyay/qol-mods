@@ -126,6 +126,8 @@ declare module 'claude-code' {
       request: Request
       pause: number
       ack: Ack
+      /** The long-turn line above the prompt is showing (SPEC.md §5.5). */
+      band: boolean
     }
   }
 }

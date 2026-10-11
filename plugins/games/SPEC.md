@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | Phases 1 and 2 built: 0.2.0 with nine games (Appendices B and C); phase 3 not started |
+| Status | Phases 1–3 built: 0.3.0 with thirteen games (Appendices B–D); phase 4 not started |
 | Author | Aseem Upadhyay, drafted with Claude |
 | Date | 2026-10-11 |
 | Lives in | `plugins/games/` in qol-mods |
@@ -489,7 +489,7 @@ Each game below lists its board, controls beyond the common ones (§5.3), rules,
 ### 10.4 Dino Run
 
 - **Board:** 21×10 cells, the ground on the bottom row. The dino is 1 cell wide and 2 tall (1 tall ducking); cacti are 1 cell wide and 1–2 tall; a bird is 1 cell.
-- **Controls:** space or ↑ jump (hold for a higher jump), ↓ duck. A click anywhere on the board jumps.
+- **Controls:** space or ↑ jump, ↓ duck for 0.4 seconds (or drop fast from a jump). A click anywhere on the board jumps. No higher jump for holding: a `Client` gets key presses, never releases.
 - **Rules:**
   - The ground scrolls left one cell a step, starting at 8 steps a second and gaining speed over time, up to 20.
   - Cacti come in 1–3; birds start at 400 points and fly at three heights.
@@ -794,7 +794,7 @@ These live in the `profile` record's own `milestones`, and show at the top of th
 | 0 | nothing | Done 2026-10-11, desktop and terminal: the platform checks of §4.3, measurements in Appendix A |
 | 1 | 0.1.0 | Built 2026-10-11 (Appendix B): hub, store, milestones, saves, settings, commands; Snake, 2048, Minesweeper, Wordle |
 | 2 | 0.2.0 | Built 2026-10-11 (Appendix C): Lights Out, Memory, Connect Four, Tic-tac-toe, Hangman |
-| 3 | 0.3.0 | Tetris, Breakout, Dino Run, Pong; `notifyTurnEnd` pausing; the long-turn line |
+| 3 | 0.3.0 | Built 2026-10-11 (Appendix D): Tetris, Breakout, Dino Run, Pong; the long-turn line (`notifyTurnEnd` pausing shipped in 0.1.0) |
 | 4 | 0.4.0 | 20 Questions; the "Coffee break" milestone |
 | Later | — | Sound on milestones (`$.audio.play`, off by default); the mobile app once it can draw a `Client`; a "You ask" mode for 20 Questions |
 
@@ -873,4 +873,18 @@ What changed from the plan while building it:
 - The hub's milestone total is 58 across the nine games. In a terminal's inline pane the hub takes 16 of its 17 rows.
 - **Going on after a game.** In play, `h` at the end of a Tic-tac-toe game did nothing, though `r` had worked between games; the test engine couldn't reproduce it. The likely cause is the board losing the keyboard when the pane redraws after a game is recorded, with a click on a square giving it back. The result line's controls became Buttons with hotkeys (§5.3). Hangman's `h` and `r` at the end were letters; a finished word game now takes plain commands. Both confirmed in play on desktop after the change.
 - A JSX gotcha came back: Memory's card height was named `h` as in 2048 (Appendix B), and was caught before a test ran. Locals named `h` stay banned.
+
+## Appendix D. Phase 3 notes
+
+Built on 2026-10-11. 73 tests pass in the test engine: Tetris's gravity curve, line clears, a tetris that sweeps the board, a wall kick, hold and topping out; Breakout's paddle angles, bricks, lives and the next level; Dino Run's jump over a cactus, a duck under a bird and night at 700; Pong's returns, points, a 7–0 win and a bot that follows the ball; the long-turn line showing a minute into a turn, going when it ends, and staying off by default; all thirteen boards in the pane on terminal and desktop.
+
+What changed from the plan while building it:
+
+- **Every arcade game waits for you.** Tetris starts on your first key, Breakout on launch, Dino Run on the first jump, Pong on the serve, so opening one never costs a life.
+- **Paddles follow the mouse.** A game can ask for pointer moves with no button held (`wantsHover`); Breakout and Pong do. The board drops bare moves for every other game.
+- **No hold-to-jump in Dino Run** (§10.4): a `Client` sees key presses only. Ducking lasts 0.4 seconds a press, and ducking in the air drops you fast.
+- **The hub drops its group headings and spacer** when the pane is short: 13 games and 4 headings don't fit a terminal's 17-row strip, 13 games alone do.
+- **The long-turn line** is one dim line above the prompt, stacked over any other mod's band (repo-spend's, coach's) rather than replacing it, the way coach does. It comes once per turn after a minute, never while the pane is open, and goes when the turn ends or `/games` opens.
+- **Tetris side column:** next, hold, level and lines, in Box cells on desktop and half-blocks in a terminal's inline pane, beside a 10×20 well.
+- The hub's milestone total is 83 across the thirteen games.
 

@@ -3,12 +3,16 @@
 import type { AnyGame } from '../core/game'
 import { BLUE, CYAN, GREEN, ORANGE, PURPLE, RED, YELLOW } from '../core/palette'
 import { game2048 } from '../games/2048/logic'
+import { breakout } from '../games/breakout/logic'
 import { connect4 } from '../games/connect4/logic'
+import { dino } from '../games/dino/logic'
 import { hangman } from '../games/hangman/logic'
 import { lights } from '../games/lights/logic'
 import { memory } from '../games/memory/logic'
 import { mines } from '../games/mines/logic'
+import { pong } from '../games/pong/logic'
 import { snake } from '../games/snake/logic'
+import { tetris } from '../games/tetris/logic'
 import { tictactoe } from '../games/tictactoe/logic'
 import { wordle } from '../games/wordle/logic'
 import type { GameId, GameRecord } from '../types'
@@ -34,9 +38,13 @@ export const CATALOG: readonly Entry[] = [
   { id: 'twenty', name: '20 Questions', group: 'Words', color: BLUE, glyph: '?', aliases: ['20q', '20-questions', '20questions'] },
 ]
 
-/** The games playable in this release (SPEC.md §14, phases 1 and 2). */
+/** The games playable in this release (SPEC.md §14, phases 1 to 3). */
 export const GAMES: Partial<Record<GameId, AnyGame>> = {
   snake,
+  tetris,
+  breakout,
+  dino,
+  pong,
   '2048': game2048,
   mines,
   lights,
@@ -93,7 +101,9 @@ const time = (sec: number) => `${Math.floor(sec / 60)}:${String(sec % 60).padSta
 export function headline(id: GameId, record: GameRecord | undefined): string {
   if (!record || record.stats.played === 0) return ''
   const best = record.stats.best
-  if (id === 'snake' || id === '2048') return best.score !== undefined ? `best ${best.score.toLocaleString('en-US')}` : ''
+  if (id === 'snake' || id === '2048' || id === 'tetris' || id === 'breakout' || id === 'dino')
+    return best.score !== undefined ? `best ${best.score.toLocaleString('en-US')}` : ''
+  if (id === 'pong') return `${record.stats.won} ${record.stats.won === 1 ? 'win' : 'wins'}`
   if (id === 'mines') return best['time.easy'] !== undefined ? `best ${time(best['time.easy'])}` : ''
   if (id === 'wordle') return `streak ${record.stats.streak.current}`
   if (id === 'lights') return best.level !== undefined ? `level ${best.level}` : ''

@@ -419,8 +419,10 @@ function onKey(local: Local, event: ClientKeyEvent, side: Side, columns: number,
 
 function onPointer(local: Local, event: ClientPointerEvent, side: Side, post: (p: BoardPost) => void): Local {
   if (event.type !== 'down' && event.type !== 'up' && event.type !== 'move') return local
-  if (event.type === 'move' && !event.button) return local
   const id = gameOf(local.screen)
+  const hoverGame = id && local.play ? GAMES[local.play.id] : undefined
+  // A bare move matters only to a game that follows the pointer (a paddle).
+  if (event.type === 'move' && !event.button && !hoverGame?.wantsHover) return local
   if (id && local.play) {
     const play = local.play
     const def = GAMES[play.id]
@@ -609,11 +611,13 @@ function drawHub(
   const total = READY.reduce((n, e) => n + (GAMES[e.id]?.milestones.length ?? 0), 0)
   const unlocked = READY.reduce((n, e) => n + Object.keys(recordOf(props, e.id).milestones).length, 0)
   const isNarrow = width < 46
+  // Group headings and the spacer only where every row fits: a terminal's inline strip has 17.
+  const isRoomy = props.room.rows >= READY.length + 8
   const rows: RenderElement[] = [header(surface, 'Games', `★ ${unlocked} of ${total}`, width)]
   let y = 1
   let lastGroup = ''
   READY.forEach((entry, i) => {
-    if (entry.group !== lastGroup) {
+    if (entry.group !== lastGroup && isRoomy) {
       lastGroup = entry.group
       rows.push(
         <Text key={`g${entry.group}`} dimColor>
@@ -648,7 +652,7 @@ function drawHub(
     )
     y += 1
   })
-  rows.push(<Box key="spacer" height={1} />)
+  if (isRoomy) rows.push(<Box key="spacer" height={1} />)
   rows.push(footer(surface, ['↑↓ choose', '⏎ play', 't milestones', 'T all', 'q close'], width))
 
   return (
