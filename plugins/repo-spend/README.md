@@ -27,7 +27,7 @@ What your Claude Code sessions cost, per repo, live, right above the prompt.
 - 📐 **Fits any width.** At narrower widths it drops the least important details rather than cutting the line off.
 - 🧩 **Plays well with other mods.** Bars other mods draw above the prompt stack beneath it instead of being hidden.
 - 🔒 **Local only.** It reads the session logs Claude Code already keeps on your machine and sends nothing anywhere.
-- ⚡ **Cheap.** Only changed logs are re-read, so a rescan of a busy repo takes about 0.1 s.
+- ⚡ **Cheap.** Only changed logs are re-read, so a rescan of every repo on the machine takes about 0.1 s.
 
 ## Install
 
@@ -109,7 +109,7 @@ Sessions on a subscription show what the same usage would cost at API list price
 
 The bar never says "to date". It labels the total with the window it actually covers: the age of the oldest session it counted, rounded **up** to whole days, months or years. So "last 3 months" means every session in the total happened within the last three months. History that starts 2 months and 4 days ago reads "last 3 months", because "last 2 months" would include sessions from before that window.
 
-Claude Code deletes its session logs after 30 days by default (the `cleanupPeriodDays` setting). repo-spend moves every session it has seen into the repo's archive when its logs go, so from the day you install it the total keeps growing instead of rolling off after a month. That covers every repo on the machine, including ones you don't open.
+Claude Code deletes its session logs after 30 days by default (the `cleanupPeriodDays` setting). repo-spend moves each session it has seen into the archive of every repo it worked in once that session's logs go, so from the day you install it the total keeps growing instead of rolling off after a month. That covers every repo on the machine, including ones you don't open.
 
 Archived sessions count toward the total, not toward **today** or **last 7d**, which come from the logs still on disk. With the default 30 days that makes no difference. If you set `cleanupPeriodDays` below 7, those two figures only cover what's left.
 
@@ -130,7 +130,7 @@ Sessions deleted before you installed it can't be counted. To keep more history 
 - It reads only your local session logs in `~/.claude/projects` (or `$CLAUDE_CONFIG_DIR/projects`).
 - It reads the logs of every repo, not only the one you're in, because a session started elsewhere can have worked in this one. From each log it keeps costs, token counts, timestamps, working folders and the folders of files Claude edited.
 - It writes these files, holding only those figures and folder paths, never your conversations:
-  - `~/.cache/claude-repo-spend/v2/folders/<project-folder>.json`, a cache of the logs still on disk, one file per `~/.claude/projects` folder, and `v2/roots.json`, which folder belongs to which repo. Both are safe to delete; they're rebuilt from the logs and `.git` folders.
+  - `~/.cache/claude-repo-spend/v2/folders/<project-folder>.json`, a cache of the logs still on disk, one file per `~/.claude/projects` folder, and `v2/roots.json`, which folder belongs to which repo. The cache is safe to delete; it's rebuilt from the logs. `roots.json` is rebuilt from the `.git` folders on disk, except for folders whose repo you've since deleted: those lose their repo, and their sessions count toward the repo they were started in.
   - `~/.local/share/claude-repo-spend/v2/<repo>.json` (or `$XDG_DATA_HOME/claude-repo-spend/v2`), the archive of sessions whose logs are gone. It's the only record of them: deleting it drops them from the total for good. It's plain JSON, so you can read it, back it up, or sum it yourself.
 
 <details>
