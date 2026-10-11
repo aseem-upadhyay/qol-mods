@@ -299,9 +299,9 @@ export const wordle: GameDef<WordleState> = {
       ? {
           title: s.guesses.length === 1 ? 'Hole in one!' : `Solved in ${s.guesses.length}`,
           lines: [s.answer.toUpperCase(), ...(s.date !== undefined ? ['daily done'] : [])],
-          hint: s.date !== undefined ? 'N practice · H hub' : 'N another · H hub',
+          again: s.date !== undefined ? 'practice' : 'another',
         }
-      : { title: `The word was ${s.answer.toUpperCase()}`, lines: [], hint: 'N another · H hub' },
+      : { title: `The word was ${s.answer.toUpperCase()}`, lines: [], again: 'another' },
 
   daily: s => s.date,
 }

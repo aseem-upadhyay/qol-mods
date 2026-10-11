@@ -197,6 +197,6 @@ export const hangman: GameDef<HangmanState> = {
 
   card: s =>
     s.isWon
-      ? { title: 'Saved!', lines: [s.word, s.misses === 0 ? 'no misses' : `${s.misses} misses`], hint: 'N next · H hub' }
-      : { title: `It was ${s.word}`, lines: [], hint: 'N next · H hub' },
+      ? { title: 'Saved!', lines: [s.word, s.misses === 0 ? 'no misses' : `${s.misses} misses`], again: 'next word' }
+      : { title: `It was ${s.word}`, lines: [], again: 'next word' },
 }

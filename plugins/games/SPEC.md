@@ -155,7 +155,7 @@ Phase 0 ran a throwaway mod, `games-probe`, on 2026-10-11: two rounds in the des
 - **Below the board:** one dim line of controls. It never wraps: on a narrow pane the least important controls drop off the end.
 - **Common keys** in every game: `p` pause, `r` restart (asks "Restart? y/n" over the board if a game is under way), `h` back to the hub, `t` this game's milestones, `q` close the pane (the game is saved first). Escape gives the keyboard back to the prompt and leaves the pane open. Each game adds its own (§10).
 - **Pausing:** a paused game dims the board and shows "Paused · p to resume" in its middle.
-- **Game over:** the board stays, undimmed, so the final position can be read, and the controls line becomes the result: a bold title ("You win!", "Cleared!"), a detail or two ("new best!"), and the keys to go on (`r again · h hub`). Milestones unlocked show as toasts. Only pausing and "Start a new game?" cover the board with a card.
+- **Game over:** the board stays, undimmed, so the final position can be read, and the controls line becomes the result: a bold title ("You win!", "Cleared!"), a detail or two ("new best!"), and two plain `Button`s, `r: again` (or `next level`, `next word`, `practice`) and `h: hub`. As Buttons they take a click, and their hotkeys work while the pane has the keys even when the board doesn't; on desktop the board seemed to lose them after a redraw (Appendix C). Once a word game is over, plain `h` and `r` work in it too. Milestones unlocked show as toasts. Only pausing and "Start a new game?" cover the board with a card.
 
 ### 5.4 Milestones
 
@@ -870,5 +870,6 @@ What changed from the plan while building it:
 - **Connect Four's Hard looks 7 moves ahead**, not 8 (§10.10).
 - **Memory has no rounded borders:** a border inside a card 2 rows tall leaves no room for its face. Cards are colored blocks.
 - The hub's milestone total is 58 across the nine games. In a terminal's inline pane the hub takes 16 of its 17 rows.
+- **Going on after a game.** In play, `h` at the end of a Tic-tac-toe game did nothing, though `r` had worked between games; the test engine couldn't reproduce it. The likely cause is the board losing the keyboard when the pane redraws after a game is recorded, with a click on a square giving it back. The result line's controls became Buttons with hotkeys (§5.3). Hangman's `h` and `r` at the end were letters; a finished word game now takes plain commands.
 - A JSX gotcha came back: Memory's card height was named `h` as in 2048 (Appendix B), and was caught before a test ran. Locals named `h` stay banned.
 

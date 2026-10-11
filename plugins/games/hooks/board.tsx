@@ -329,7 +329,9 @@ function onKey(local: Local, event: ClientKeyEvent, side: Side, columns: number,
     const def = GAMES[play.id]
     if (!def) return local
     // Word games type letters, so their commands take shift (SPEC.md §5.3).
-    const cmd = def.isWordy ? (key.length === 1 && key === key.toUpperCase() && /[A-Z]/.test(key) ? key.toLowerCase() : '') : key.toLowerCase()
+    // Once a game is over, letters aren't guesses: plain h, r, t, q and n work there too.
+    const isShifted = key.length === 1 && key === key.toUpperCase() && /[A-Z]/.test(key)
+    const cmd = def.isWordy && !play.outcome ? (isShifted ? key.toLowerCase() : '') : key.toLowerCase()
 
     if (play.confirm) {
       if (cmd === 'y' || key === 'y' || key === 'Y') return restart(local, side, columns, post, play.confirm === 'practice')
@@ -346,7 +348,7 @@ function onKey(local: Local, event: ClientKeyEvent, side: Side, columns: number,
     if (cmd === 'p' && (def.kind === 'arcade' || def.isTimed) && !play.outcome && def.isUnderway(play.s)) {
       return { ...local, play: play.isPaused ? { ...play, isPaused: false } : pause(play) }
     }
-    if ((cmd === 'r' && !def.isWordy) || (cmd === 'n' && def.isWordy)) {
+    if ((cmd === 'r' && (!def.isWordy || play.outcome)) || (cmd === 'n' && def.isWordy)) {
       const isPractice = def.isWordy === true
       if (def.isUnderway(play.s) && !play.outcome) return { ...local, play: { ...play, confirm: isPractice ? 'practice' : 'restart' } }
 
@@ -499,7 +501,7 @@ function footer(surface: ClientSurface<Local>, items: readonly string[], width: 
 }
 
 function drawGame(local: Local, play: Play, side: Side, surface: ClientSurface<Local>, width: number): RenderElement {
-  const { Box, Text } = surface.elements
+  const { Box, Button, Text } = surface.elements
   const def = GAMES[play.id]
   if (!def) return <Text>Unknown game</Text>
   const props = side.props
@@ -524,17 +526,32 @@ function drawGame(local: Local, play: Play, side: Side, surface: ClientSurface<L
   let result: RenderElement | undefined
   if (play.outcome) {
     const c = def.card(play.s, play.outcome, play.best)
-    const hint = c.hint ?? (def.isWordy ? 'N new · H hub' : 'r again · h hub')
+    const again = c.again ?? 'again'
+    // Buttons, so a click works and so does the hotkey while the pane has the
+    // keys, even if the board itself lost them on a redraw.
+    const press = (fn: (l: Local) => Local) => () => {
+      const current = surface.state
+      if (current) surface.setState(fn(current))
+    }
+    const post = (p: BoardPost) => send(surface, p)
     result = (
       <Box key="result" flexDirection="row" width={boardWidth} height={1}>
         <Text bold color={play.outcome.result === 'won' ? YELLOW : INK} wrap="truncate">
           {c.title}
         </Text>
         <Text color={INK} wrap="truncate">
-          {c.lines.length ? ` · ${fit(c.lines, Math.max(0, boardWidth - c.title.length - hint.length - 6))}` : ''}
+          {c.lines.length ? ` · ${fit(c.lines, Math.max(0, boardWidth - c.title.length - again.length - 16))}` : ''}
         </Text>
         <Box flexGrow={1} />
-        <Text dimColor>{hint}</Text>
+        <Button
+          key="again"
+          plain
+          hotkey="r"
+          label={again}
+          onPress={press(l => restart(l, side, surface.columns, post, def.isWordy === true))}
+        />
+        <Text> </Text>
+        <Button key="hub" plain hotkey="h" label="hub" onPress={press(l => go(l, 'hub', side, surface.columns, post))} />
       </Box>
     )
   }

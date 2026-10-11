@@ -72,8 +72,8 @@ export type GameDef<S> = {
   status: (s: S, best: Record<string, number>) => string
   /** The footer's controls, most important first: dropped from the end when narrow. */
   controls: (s: S) => readonly string[]
-  /** The result line under a finished board: a title, details, and the keys to go on when not the usual. */
-  card: (s: S, outcome: Omit<Outcome, 'ms'>, best: Record<string, number>) => { title: string; lines: string[]; hint?: string }
+  /** The result line under a finished board: a title, details, and what `r` does next when not "again". */
+  card: (s: S, outcome: Omit<Outcome, 'ms'>, best: Record<string, number>) => { title: string; lines: string[]; again?: string }
   /** Wordle's daily puzzle: the date a state belongs to, saved apart from practice games. */
   daily?: (s: S) => string | undefined
 }

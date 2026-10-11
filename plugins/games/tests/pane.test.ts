@@ -120,6 +120,38 @@ for (const surface of SURFACES) {
       expect(seen.closed).toBe(1)
     })
 
+    test('a finished game goes on with r or h, and its buttons do the same', async ($, on) => {
+      const { run, pane, clock } = await boot($, on, surface)
+      await run('ttt')
+      const ui = await pane()
+      // Easy is random: keep playing every square until the game is over.
+      for (let round = 0; round < 9 && !(await ui.find({ type: 'Button', key: 'hub', ...IN })); round++) {
+        for (const k of '123456789') await ui.key({ key: k, ...IN })
+        await ui.advance(1000)
+        await clock.settle()
+      }
+      expect(await ui.find({ type: 'Button', key: 'again', ...IN })).toBeDefined()
+      await ui.press({ key: 'again', ...IN })
+      expect(await ui.find({ type: 'Button', key: 'hub', ...IN })).toBeUndefined()
+
+      // The same pane, now asked for Hangman.
+      await run('hangman')
+      const hm = ui
+      for (const k of 'etaoinsrhldcumfpgwybvkxjqz') {
+        if (await hm.find({ type: 'Button', key: 'hub', ...IN })) break
+        await hm.key({ key: k, ...IN })
+      }
+      // Over: a plain r deals the next word rather than guessing an R.
+      await hm.key({ key: 'r', ...IN })
+      expect(await hm.find({ type: 'Text', text: /^6 misses left$/, ...IN })).toBeDefined()
+      for (const k of 'etaoinsrhldcumfpgwybvkxjqz') {
+        if (await hm.find({ type: 'Button', key: 'hub', ...IN })) break
+        await hm.key({ key: k, ...IN })
+      }
+      await hm.key({ key: 'h', ...IN })
+      expect(await hm.find({ type: 'Text', text: 'Games', ...IN })).toBeDefined()
+    })
+
     test('every board fits the pane', async ($, on) => {
       const { run, pane } = await boot($, on, surface)
       for (const game of ['snake', '2048', 'mines', 'lights', 'memory', 'connect4', 'tictactoe', 'wordle', 'hangman']) {

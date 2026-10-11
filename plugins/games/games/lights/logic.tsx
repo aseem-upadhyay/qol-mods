@@ -192,6 +192,6 @@ export const lights: GameDef<LightsState> = {
   card: s => ({
     title: `Level ${s.level} cleared`,
     lines: [s.moves <= s.par ? `${s.moves} moves · on par!` : `${s.moves} moves · par ${s.par}`],
-    hint: 'r next level · h hub',
+    again: 'next level',
   }),
 }

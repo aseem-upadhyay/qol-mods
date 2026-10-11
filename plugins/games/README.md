@@ -75,7 +75,9 @@ Answer `y` to add the marketplace and pick the **user** scope.
 | **q** | Close the pane |
 | **Esc** | Hand the keyboard back to the prompt; the pane stays |
 
-In Wordle and Hangman the letters are your guesses, so the commands are capitals: **H**, **T**, **Q**, and **N** for a new word.
+In Wordle and Hangman the letters are your guesses, so during a game the commands are capitals: **H**, **T**, **Q**, and **N** for a new word. Once a game is over, plain **h** and **r** work as everywhere else.
+
+When a game ends, the line under the board has the result and two buttons, **r** (again, or the next level or word) and **h** (back to the list). Click them or press their keys.
 
 | Game | Controls |
 | --- | --- |
