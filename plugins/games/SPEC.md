@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | Phase 0 done (§4.3, Appendix A); phase 1 not started |
+| Status | Phase 0 done on desktop and terminal (§4.3, Appendix A); phase 1 not started |
 | Author | Aseem Upadhyay, drafted with Claude |
 | Date | 2026-10-11 |
 | Lives in | `plugins/games/` in qol-mods |
@@ -38,7 +38,7 @@ The screen shows the board, one line of score above it and one line of controls 
 ## 3. Decisions already made
 
 1. **One command, one pane.** `/games` with an optional game name. The hub and every game share one pane, `games`, which is retitled as you move between them.
-2. **Boards draw in a `Client` surface module.** It is the only element with keys, pointer and a frame clock (§4.1). It can't hold `Svg`, so boards are drawn from `Box` cells with background colors: one approach for every game on both surfaces (§9.3, Appendix A; the terminal is still to be seen, §4.3).
+2. **Boards draw in a `Client` surface module.** It is the only element with keys, pointer and a frame clock (§4.1). It can't hold `Svg`, so boards are drawn from `Box` cells with background colors on both surfaces, and from half-blocks in a terminal pane too short for them (§9.3, §4.3).
 3. **The board is a dark card in both themes.** Game colors are raw hex on the board's own background, so contrast doesn't depend on the theme. Text around the board uses theme keys.
 4. **The hooks module owns progress.** The board posts events; `register.tsx` evaluates milestones, writes `$.store`, and raises toasts. Milestones are worked out in one place only.
 5. **Writes are deltas on a fresh read.** Every store write re-reads the game's record, applies the change and writes it back in the same hook, never from a copy held in memory (§7.4).
@@ -72,25 +72,25 @@ From the 2.1.295 types:
 - `surface.post(data)`: one message per frame to the hooks module as `ui.message`. A hook answering `{ props }` hands the board new props.
 - Bounds: 20,000 nodes, 32 deep, 100,000 characters per tree; `props` at most 100,000 characters serialized.
 - `Box` `top`, `left`, `width` and `height` are whole cells: the engine refuses a fractional position.
-- The `Pane` render props carry `isFocused` and `bodyColumns`, and the pane redraws when focus changes; that is how the hooks module learns the board lost the keyboard (§7.2).
+- The `Pane` render props carry `isFocused`, `bodyColumns`, `scroll.bodyRows` and `placement`, and the pane redraws when they change. `isFocused` does not say whether the board has the keys: in a terminal a click on the board sets it false (§4.3 P4).
 
 ### 4.3 Phase 0: what was checked
 
-Phase 0 ran a throwaway mod, `games-probe`, in the desktop app on 2026-10-11, in two rounds. Each question's answer and what it changed:
+Phase 0 ran a throwaway mod, `games-probe`, on 2026-10-11: two rounds in the desktop app (Claude Code 2.1.295) and two in a terminal (2.1.296, a 91×58 terminal, where the pane sat inline above the prompt). Measurements are in Appendix A.
 
-| # | Question | Answer | What it changes |
-|---|---|---|---|
-| P1 | Can a board draw solid, roughly square colored cells on desktop? | Not from text: the desktop draws text in a proportional font with tall lines, so a text cell is about 11×38 px and `▀` half-blocks fill only a thin strip. Yes from `Box`: a `Box` 2 columns × 1 row with a `backgroundColor` is about 31×38 px, solid, with no gaps between rows. | Boards are grids of `Box` cells (§9.3). No pixel canvas. |
-| P2 | Can a surface module `import` sibling files? | Yes. | Game logic lives in its own files, as §6.1 lays out. |
-| P3 | Does `$.ui.open({ focus: true })` give the board the keyboard? | Yes, when the prompt box is empty. Otherwise the first click does. | The board shows "Click to play" until it has received a key or a click. |
-| P4 | Is there a signal when the board loses focus? | Yes: the pane redraws with `isFocused: false`. The board's own timer keeps running regardless. | The hooks module passes `paused: true` when the pane loses focus (§7.2). |
-| P5 | Does `surface.every(50, …)` hold 20 frames a second? | Yes: 19.9–20.1 on desktop. | None. |
-| P6 | How big is a desktop side pane? | 42 columns × 45 rows at its default width; 149 columns when widened. | Every board fits 42 columns (§10). |
-| P7 | Does a hidden pane's board keep running? | Not caught in the probe. Moot: a hidden pane isn't focused, so P4 pauses it. | None. |
-| P8 | Does `position: absolute` place a `Box` inside its parent? | Not on desktop: it is placed from the board's top-left corner, ignoring the parent. | Nothing is absolutely positioned. Moving pieces are painted into the cell grid (§9.3). |
-| P9 | Which clicks reach the board? | Left button, with shift, alt and ctrl reported. Right-click never arrives. | Minesweeper flags with shift+click or `f` (§10.7). |
-
-Still open: none of this was seen in a terminal. Before 0.1.0 ships, one look at each phase 1 game in a terminal (§14).
+| # | Question | Desktop | Terminal | What it changes |
+|---|---|---|---|---|
+| P1 | Can a board draw solid, roughly square colored cells? | Not from text: the font is proportional with tall lines, so a text cell is about 11×38 px and `▀` half-blocks fill only a thin strip. Yes from `Box`: 2 columns × 1 row is about 31×38 px, solid. | Yes, all three ways: text cells, `Box` cells and `▀` half-blocks, the half-blocks giving two square pixels per cell. | Boards are `Box` cells; the terminal can also draw them as half-blocks when rows are short (§9.3). |
+| P2 | Can a surface module `import` sibling files? | Yes. | Yes. | Game logic lives in its own files (§6.1). |
+| P3 | Does `$.ui.open({ focus: true })` give the board the keyboard? | Yes, when the prompt box is empty; otherwise the first click does. | Not seen: the first key came after a click. A click always gives the board the keys. | The board shows "Click to play" until it has received a key or a click. |
+| P4 | Is there a signal when the player leaves the board? | The pane redraws with `isFocused: false` on Escape. | No: a click on the board itself sets `isFocused: false`, and keys keep arriving. Escape changes nothing a plugin sees. | `isFocused` is not a pause signal. Pausing follows what the player does next instead (§7.2). |
+| P5 | Does `surface.every(50, …)` hold 20 frames a second? | Yes: 19.9–20.1. | Mostly: 15–19.5. | Arcade speeds are set in ticks and run up to a quarter slower in a terminal. Accepted. |
+| P6 | How much room does the pane give? | Docked: 42 columns × 45 rows at the default width, 149 columns widened. | Inline above the prompt: 87 columns × 17 rows. It docks beside the transcript only in fullscreen at 110 columns or more. | Boards fit 42 columns and, in a terminal, 15 rows plus the two lines of chrome (§9.3, §10). |
+| P7 | Does a hidden pane's board keep running? | Not caught. | Not caught. | Arcade games pause when the pane closes or hides (§7.2). |
+| P8 | Does `position: absolute` place a `Box` inside its parent? | No: from the board's corner, ignoring the parent. | Yes. | Nothing is absolutely positioned; moving pieces are painted into the grid (§9.3). |
+| P9 | Which clicks reach the board? | Left, with shift, alt, ctrl. Right-click never arrives. | Left, with shift. No right-click seen. | Minesweeper flags with shift+click or `f` (§10.7). |
+| P10 | Can the player close the board? | The pane's close mark. | The close mark; Escape doesn't. The person couldn't find a way during the probe. | `q` closes the pane after saving, and `/games close` does too (§5.3, §12). |
+| P11 | Does text on a colored tile read well? | Yes: bold white on the tile color. | No: the same text drew dim gray. | Tile text colors are checked on both surfaces in phase 1; dark text on light tiles where white fails. |
 
 ## 5. The experience
 
@@ -152,7 +152,7 @@ Still open: none of this was seen in a terminal. Before 0.1.0 ships, one look at
 
 - **Above the board:** the game's name on the left; on the right its live numbers (score, best; or time, mines left; or level, moves).
 - **Below the board:** one dim line of controls. It never wraps: on a narrow pane the least important controls drop off the end.
-- **Common keys** in every game: `p` pause, `r` restart (asks "Restart? y/n" over the board if a game is under way), `h` back to the hub, `t` this game's milestones. Each game adds its own (§10).
+- **Common keys** in every game: `p` pause, `r` restart (asks "Restart? y/n" over the board if a game is under way), `h` back to the hub, `t` this game's milestones, `q` close the pane (the game is saved first). Escape gives the keyboard back to the prompt and leaves the pane open. Each game adds its own (§10).
 - **Pausing:** a paused game dims the board and shows "Paused · p to resume" in its middle.
 - **Game over:** the board stays and a card covers its middle: the result, "New best!" when it is, any milestones unlocked this game, and `r again · h hub`.
 
@@ -252,7 +252,7 @@ type BoardProps = {
   best: Record<string, number>   // what the score line shows
   unlocked: string[]             // milestone ids, for the game-over card
   justUnlocked?: string[]        // shown on the game-over card, then cleared
-  paused?: boolean               // set by turn.complete or the pane losing focus (§4.3 P4)
+  paused?: boolean               // set when the player does something else (§7.2)
   settings: { highContrast: boolean }
   twenty?: TwentyView            // 20 Questions only
 }
@@ -275,7 +275,13 @@ type BoardProps = {
 
 - **Turn-based games** (2048, Minesweeper, Lights Out, Memory, Connect Four, Tic-tac-toe, Wordle, Hangman, 20 Questions): after every move.
 - **Arcade games** (Snake, Tetris, Breakout, Dino Run, Pong): every 2 seconds while running, and at once on pause, on `h` and on game over.
-- **Losing focus pauses.** When the pane redraws with `isFocused: false` (Escape, a click on the prompt, another pane shown), the hooks module passes `paused: true`. An arcade game pauses and saves at once; a turn-based game just saves.
+- **Leaving pauses.** The pane's `isFocused` can't be trusted for this (§4.3 P4), so the hooks module passes `paused: true` when the player does something else:
+  - edits or submits a prompt (`prompt.edit`, `prompt.submit`; whether `prompt.edit` fires on each keystroke is checked first thing in phase 1)
+  - a turn starts or completes (`turn.start`, `turn.complete`)
+  - the pane closes, or another pane is shown in its place
+  - on desktop, the pane redraws with `isFocused: false` and the board has had no key or click for 500 ms (a click on the board itself comes with one)
+
+  An arcade game pauses and saves at once; a turn-based game just saves.
 - **A finished game** clears its `save`; the next open starts fresh.
 - **Resuming:** opening a game that has a `save` restores it.
   - Turn-based games continue at once.
@@ -399,17 +405,19 @@ interface PluginState {
 
 ### 9.3 Drawing the board
 
-Phase 0 settled this (§4.3 P1, P8): every board is built from `Box`es with background colors, never from text cells, and nothing is absolutely positioned.
+Phase 0 settled this (§4.3 P1, P6, P8): nothing is absolutely positioned, and every board is a grid of cells drawn one of two ways.
 
-- **The cell canvas** (`core/canvas.ts`): a grid of cells, each a `Box` 2 columns wide and 1 row tall, about 31×38 px on desktop. A game paints a frame into a plain array of colors; the canvas turns each row into one row `Box` of runs, neighbouring cells of the same color becoming one `Box` of width 2 × n. A row of a typical frame comes to 3–10 nodes, so a whole board is a few hundred, far inside the 20,000 bound.
+- **Box cells:** each cell a `Box` 2 columns wide and 1 row tall with a `backgroundColor`, about 31×38 px on desktop and about 28×30 px in a terminal. A game paints a frame into a plain array of colors; the canvas (`core/canvas.ts`) turns each row into one row `Box` of runs, neighbouring cells of the same color becoming one `Box` of width 2 × n. A row of a typical frame comes to 3–10 nodes, so a whole board is a few hundred, far inside the 20,000 bound.
+- **Half-blocks** (terminal only): each cell is 1 column and half a row, drawn as `▀` with the top cell's color as foreground and the bottom cell's as background. A board takes half the columns and half the rows of Box cells, at the same square shape. The desktop can't draw them (§4.3 P1).
+- **Which one:** Box cells whenever the board fits the pane's body (`bodyColumns`, `scroll.bodyRows`, less the two lines of chrome). Otherwise, in a terminal, half-blocks. A board with text in its cells (Minesweeper's numbers, every tile game) can't use half-blocks; it uses its compact layout (§10) or, failing that, offers only the sizes that fit.
 - **Moving pieces** (the snake, the ball, paddles, the dino, a falling piece) are painted into the frame like everything else. Positions are kept in fractional cells for the physics and rounded when painted, so motion is one cell at a time.
-- **Tiles** (2048, Wordle, Memory, Connect Four, Tic-tac-toe, the keyboards) are `Box`es with a `backgroundColor` and a centered bold `Text`, laid out with `gap`. Connect Four's discs and Memory's cards use `borderStyle="round"`, which the desktop draws as a rounded rectangle.
+- **Tiles** (2048, Wordle, Memory, Connect Four, Tic-tac-toe, the keyboards) are `Box`es with a `backgroundColor` and a centered bold `Text`, laid out with `gap`. Connect Four's discs and Memory's cards use `borderStyle="round"`, which both surfaces draw with rounded corners. Text colors on tiles are picked per surface (§4.3 P11).
 - **Text on the board** (the pause note, the game-over card) is a centered `Box` with its own background, drawn in the frame's place for those rows, never over it.
-- **Width:** every board fits the default 42 columns, so at most 21 cells across. Bigger layouts (Minesweeper Hard, Memory 4×6) are offered only when `surface.columns` allows.
+- **Room:** every board fits 42 columns, so at most 21 Box cells across. In a terminal's inline pane, every game also fits 15 board rows, through half-blocks or its compact layout. Bigger layouts (Minesweeper Medium and Hard, Memory 6×4) are offered only when they fit.
 
 ## 10. The games
 
-Each game below lists its board, controls beyond the common ones (§5.3), rules, what it saves, its headline in the hub, and its milestones. Board sizes are in cells of the cell canvas (2 columns × 1 row each) and fit the default 42-column pane (§4.3 P6).
+Each game below lists its board, controls beyond the common ones (§5.3), rules, what it saves, its headline in the hub, and its milestones. Board sizes are in cells (§9.3) and fit the default 42-column pane. Where a board is taller than 15 rows, the game says how it fits a terminal's inline pane, which leaves 15 rows for the board (§4.3 P6).
 
 ### 10.1 Snake
 
@@ -434,7 +442,7 @@ Each game below lists its board, controls beyond the common ones (§5.3), rules,
 
 ### 10.2 Tetris
 
-- **Board:** 10×20 cells (20 columns × 20 rows). The next piece, the held piece and the level sit in a column 5 cells wide beside it.
+- **Board:** 10×20 cells (20 columns × 20 rows). The next piece, the held piece and the level sit in a column 5 cells wide beside it. In a terminal's inline pane: half-blocks, 10 columns × 10 rows.
 - **Controls:**
   - ←→ move, ↓ soft drop, space hard drop
   - ↑ or `x` rotate clockwise, `z` counter-clockwise
@@ -458,7 +466,7 @@ Each game below lists its board, controls beyond the common ones (§5.3), rules,
 
 ### 10.3 Breakout
 
-- **Board:** 20×16 cells: 5 rows of 10 bricks, each brick 2 cells wide; a paddle 4 cells wide; a ball of 1 cell.
+- **Board:** 20×16 cells: 5 rows of 10 bricks, each brick 2 cells wide; a paddle 4 cells wide; a ball of 1 cell. In a terminal's inline pane: half-blocks, 20 columns × 8 rows.
 - **Controls:** ←→ or the mouse (the paddle follows the pointer's column). Space launches.
 - **Rules:**
   - 3 lives. The ball speeds up at 4 and 12 hits and when it first reaches the top rows.
@@ -520,7 +528,7 @@ Each game below lists its board, controls beyond the common ones (§5.3), rules,
 
 ### 10.6 2048
 
-- **Board:** 4×4 tiles, each 7 columns × 3 rows with 1-cell gaps (33 × 17).
+- **Board:** 4×4 tiles, each 7 columns × 3 rows with 1-cell gaps (33 × 17). Compact, for a terminal's inline pane: tiles 6 columns × 2 rows, gaps of 1 column and no gap rows (27 × 8).
 - **Controls:** arrows or WASD. On desktop, a swipe (pointer drag of at least 3 cells) works too.
 - **Rules:**
   - The standard game: tiles slide and merge, and a new tile (2, or 4 one time in ten) appears after each move that changed the board.
@@ -543,7 +551,7 @@ Each game below lists its board, controls beyond the common ones (§5.3), rules,
 
 ### 10.7 Minesweeper
 
-- **Board:** Easy 9×9 with 10 mines, Medium 16×16 with 40. Hard (30×16, 99 mines) is offered only when the region has at least 62 columns.
+- **Board:** Easy 9×9 with 10 mines, Medium 16×16 with 40. Medium needs 16 board rows, so a terminal's inline pane offers Easy alone. Hard (30×16, 99 mines) is offered only when the region has at least 62 columns.
 - **Controls:**
   - Click to reveal, shift+click to flag. Right-click never reaches the board (§4.3 P9).
   - Click a satisfied number to chord.
@@ -588,7 +596,7 @@ Each game below lists its board, controls beyond the common ones (§5.3), rules,
 
 ### 10.9 Memory
 
-- **Board:** 4×4 cards (8 pairs), each 6 columns × 3 rows. 6 across × 4 down (12 pairs) is offered when the region has at least 41 columns.
+- **Board:** 4×4 cards (8 pairs), each 6 columns × 3 rows. 6 across × 4 down (12 pairs) is offered when the region has at least 41 columns. Compact: cards 6 columns × 2 rows (11 rows in all).
 - **Controls:** click a card, or arrows and space.
 - **Rules:**
   - Flip two cards. A match stays face up; a miss turns back after 0.8 seconds.
@@ -747,6 +755,7 @@ These live in the `profile` record's own `milestones`, and show at the top of th
 | `/games` | Opens the pane on the hub, focused |
 | `/games <name>` | Opens that game; resumes a save if there is one |
 | `/games milestones` | Opens the all-games milestone view |
+| `/games close` | Saves any game in progress and closes the pane |
 | `/games reset <name>` or `/games reset all` | Opens the reset card (§8.3) |
 
 - **Names:** each game takes its id and a few aliases: `snake`; `tetris`; `breakout`; `dino` and `dino-run`; `pong`; `2048`; `mines` and `minesweeper`; `lights` and `lights-out`; `memory`; `connect4`, `connect-four` and `c4`; `tictactoe`, `ttt` and `xo`; `wordle`; `hangman`; `twenty`, `20q` and `20-questions`.
@@ -779,8 +788,8 @@ These live in the `profile` record's own `milestones`, and show at the top of th
 
 | Phase | Ships | Contents |
 |---|---|---|
-| 0 | nothing | Done 2026-10-11: the platform checks of §4.3, measurements in Appendix A |
-| 1 | 0.1.0 | Hub, store, milestones, saves, settings, commands; Snake, 2048, Minesweeper, Wordle; one look at each in a terminal before release |
+| 0 | nothing | Done 2026-10-11, desktop and terminal: the platform checks of §4.3, measurements in Appendix A |
+| 1 | 0.1.0 | Hub, store, milestones, saves, settings, commands; Snake, 2048, Minesweeper, Wordle; each seen on desktop and in a terminal's inline pane before release |
 | 2 | 0.2.0 | Lights Out, Memory, Connect Four, Tic-tac-toe, Hangman |
 | 3 | 0.3.0 | Tetris, Breakout, Dino Run, Pong; `notifyTurnEnd` pausing; the long-turn line |
 | 4 | 0.4.0 | 20 Questions; the "Coffee break" milestone |
@@ -796,9 +805,9 @@ Phase 1's four games cover the cell canvas, tiles, keys, the pointer, the frame 
 
 ## Appendix A. Phase 0 results
 
-The answers and decisions are in §4.3. These are the measurements behind them, all from the desktop app (Claude Code 2.1.295) with the probe docked in a side pane. Pixel sizes are from Retina screenshots, so they are twice CSS pixels.
+The answers and decisions are in §4.3. These are the measurements behind them. Pixel sizes are from Retina screenshots, so they are twice CSS pixels.
 
-**Round 1: text cells, keys, pointer, clock.**
+**Desktop round 1** (Claude Code 2.1.295, docked side pane): text cells, keys, pointer, clock.
 
 - Viewport 106×52; pane body 42×45, docked; `Client` region 42×23.
 - Frame clock at `every(50)`: 30 one-second samples between 19.9 and 20.1 ticks a second.
@@ -809,12 +818,23 @@ The answers and decisions are in §4.3. These are the measurements behind them, 
 - `import` from a sibling file inside a surface module: worked.
 - In the test kit, the module was called twice before its first `setState`, starting two timers (40 ticks in a second); a `WeakSet` guard fixed it.
 
-**Round 2: Box cells, sprites, tiles.**
+**Desktop round 2:** Box cells, sprites, tiles.
 
 - A `Box` 2 columns × 1 row with a `backgroundColor`: about 31×38 px, solid, rows touching with no gap.
 - A tile `Box` 7 columns × 3 rows with centered bold text: about 111×114 px. Letter tiles 3×1, a `round` border: drawn as expected, the border with rounded corners.
 - `position="absolute"` children of a `position="relative"` board were placed from the `Client` region's top-left corner, over the rows above the board, not inside it.
 - A fractional `top` (2.5) was refused by the engine: positions are whole cells.
 - shift+click arrived as `down`/`up` with `shift: true`; right-click arrived as nothing.
+
+**Terminal rounds** (Claude Code 2.1.296 started with `--plugin-dir`, a 91×58 terminal, not fullscreen):
+
+- The pane sat inline above the prompt: body 87×17, `Client` region 87×28, so the rows past 17 were cut off. Moving the input lines and the later sections to the top was the second round; the `--plugin-dir` folder reloaded on its own after the edit.
+- Frame clock at `every(50)`: 30 samples between 15 and 19.5 ticks a second.
+- Text cells (two spaces on a background color), Box cells (2×1) and `▀` half-blocks all drew solid. Two half-block pixels make one square, about 14×15 px.
+- Two `position="absolute"` blocks inside a `position="relative"` board moved inside that board.
+- Tiles drew at their sizes and the `round` border with rounded corners, but bold white text on the 2048, green and yellow tiles drew dim gray.
+- Keys: arrows and letters, every one after a click on the board. Pointer: `enter`, `leave`, `down`, `up`, `move`; button `left` only; shift reported; no `fine` position (the terminal tab was the desktop app's own terminal panel).
+- Focus: the pane opened focused; the first click on the board set the pane's `isFocused` to false, and keys kept arriving at the board for the rest of the run (86 ticks counted while "unfocused"). No `ui.focus` event fired.
+- Escape gave no sign a plugin could see, and the person found no way to close the board besides the pane's close mark.
 
 The probe was a throwaway mod outside the repo and was deleted after these were recorded.
