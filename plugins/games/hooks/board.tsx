@@ -542,7 +542,8 @@ function drawGame(local: Local, play: Play, side: Side, surface: ClientSurface<L
           {c.title}
         </Text>
         <Text color={INK} wrap="truncate">
-          {c.lines.length ? ` · ${fit(c.lines, Math.max(0, boardWidth - c.title.length - again.length - 16))}` : ''}
+          {/* What's left after the title and the two buttons (" r: again  h: hub"). */}
+          {c.lines.length && fit(c.lines, boardWidth - c.title.length - again.length - 14) ? ` · ${fit(c.lines, boardWidth - c.title.length - again.length - 14)}` : ''}
         </Text>
         <Box flexGrow={1} />
         <Button

@@ -266,6 +266,6 @@ export const breakout: GameDef<BreakoutState> = {
 
   card: (s, _o, best) => ({
     title: 'Game over',
-    lines: [`${s.score} points · level ${s.level}`, s.score > (best.score ?? 0) && s.score > 0 ? 'new best!' : `best ${best.score ?? 0}`],
+    lines: [`${s.score} points`, `level ${s.level}`, s.score > (best.score ?? 0) && s.score > 0 ? 'new best!' : `best ${best.score ?? 0}`],
   }),
 }

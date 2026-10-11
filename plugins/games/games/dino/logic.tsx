@@ -185,6 +185,6 @@ export const dino: GameDef<DinoState> = {
 
   card: (s, _o, best) => ({
     title: 'Game over',
-    lines: [`${scoreOf(s)} points · ${s.cleared} cleared`, scoreOf(s) > (best.score ?? 0) && scoreOf(s) > 0 ? 'new best!' : `best ${best.score ?? 0}`],
+    lines: [`${scoreOf(s)} points`, `${s.cleared} cleared`, scoreOf(s) > (best.score ?? 0) && scoreOf(s) > 0 ? 'new best!' : `best ${best.score ?? 0}`],
   }),
 }

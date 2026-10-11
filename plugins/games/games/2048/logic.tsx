@@ -241,7 +241,8 @@ export const game2048: GameDef<State2048> = {
   card: (s, _o, best) => ({
     title: s.maxTile >= 2048 ? `You made ${s.maxTile}!` : 'No moves left',
     lines: [
-      `Score ${s.score.toLocaleString('en-US')} · ${s.moves} moves`,
+      `${s.score.toLocaleString('en-US')} points`,
+      `${s.moves} moves`,
       s.score > (best.score ?? 0) ? 'New best!' : `Best ${(best.score ?? 0).toLocaleString('en-US')}`,
     ],
   }),
