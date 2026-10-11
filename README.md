@@ -28,6 +28,14 @@ How much have you burned on this repo, and how much value are you getting from y
 /plugin install repo-spend --marketplace aseem-upadhyay/qol-mods
 ```
 
+### [games](plugins/games)
+
+A quick game while Claude works. `/games` opens Snake, 2048, Minesweeper or Wordle in a side pane, with milestones to chase and your progress saved between sessions. Arcade games pause when you type in the prompt or Claude finishes a turn.
+
+```
+/plugin install games --marketplace aseem-upadhyay/qol-mods
+```
+
 ## Install
 
 Every mod installs the same way. Type this at the prompt of a Claude Code terminal session, replacing `<mod>` with the mod's name:

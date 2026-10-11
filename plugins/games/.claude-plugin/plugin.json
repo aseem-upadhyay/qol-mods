@@ -1,0 +1,31 @@
+{
+  "name": "games",
+  "version": "0.1.0",
+  "description": "Small, good-looking games in a side pane: /games for Snake, 2048, Minesweeper and Wordle, with milestones and your progress saved",
+  "author": { "name": "Aseem Upadhyay", "url": "https://github.com/aseem-upadhyay" },
+  "homepage": "https://github.com/aseem-upadhyay/qol-mods/tree/main/plugins/games",
+  "repository": "https://github.com/aseem-upadhyay/qol-mods",
+  "license": "MIT",
+  "keywords": ["games", "snake", "2048", "minesweeper", "wordle", "milestones"],
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "notifyTurnEnd": {
+      "type": "boolean",
+      "title": "Tell me when Claude finishes",
+      "description": "While a game is open, a toast when Claude finishes a turn, and an arcade game pauses",
+      "default": true
+    },
+    "highContrast": {
+      "type": "boolean",
+      "title": "High contrast colors",
+      "description": "Orange and blue in Wordle instead of green and yellow",
+      "default": false
+    },
+    "wordleHardMode": {
+      "type": "boolean",
+      "title": "Wordle hard mode",
+      "description": "Hints you've found must be used in later guesses",
+      "default": false
+    }
+  }
+}

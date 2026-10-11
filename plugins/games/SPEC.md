@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | Phase 0 done on desktop and terminal (§4.3, Appendix A); phase 1 not started |
+| Status | Phase 1 built: 0.1.0 with Snake, 2048, Minesweeper, Wordle (Appendix B); phase 2 not started |
 | Author | Aseem Upadhyay, drafted with Claude |
 | Date | 2026-10-11 |
 | Lives in | `plugins/games/` in qol-mods |
@@ -61,7 +61,7 @@ From the 2.1.295 types:
 
 - **Where you can play:** terminal and desktop. vscode and mobile show the hub read-only with "Open Claude Code on your computer to play."
 - **Inside a `Client`:** `Box`, `Text`, `Button`, `Input`, `Select`, `Link`, `Code`, `Markdown`. No `Svg`, `Raster` or `Image`.
-- **`Svg` on desktop:** used only outside the board: game icons in the hub and the badge on a milestone card. The terminal draws a glyph instead (§9.1).
+- **`Svg`:** not used. The hub and every card are inside the board's `Client`, so the look is the same everywhere: colored glyph tiles (§9.1).
 
 ### 4.2 Client mechanics this spec relies on
 
@@ -69,7 +69,7 @@ From the 2.1.295 types:
 - `surface.onPointer(fn)`: `down`/`move`/`up` with cell coordinates and which button.
 - `surface.every(ms, fn)`: the frame clock. Started once per instance, guarded by a module-level `WeakSet` of surfaces: the module can be called again (a resize, new props) before its first `setState`, so checking `state === undefined` alone starts the timer twice and the game runs at double speed (found in phase 0).
 - `surface.setState(next)`: local state; redraws on the next frame. Three renders in a row with no tick, key or pointer between them unmount the instance, so every `setState` follows an input or a tick.
-- `surface.post(data)`: one message per frame to the hooks module as `ui.message`. A hook answering `{ props }` hands the board new props.
+- `surface.post(data)`: one message per frame to the hooks module as `ui.message`, and **a later post in the same frame replaces an undelivered one**. Leaving a game posts a save and a navigation in one frame, so the board sends through an outbox that repeats every unacknowledged post (§6.2; found in phase 1).
 - Bounds: 20,000 nodes, 32 deep, 100,000 characters per tree; `props` at most 100,000 characters serialized.
 - `Box` `top`, `left`, `width` and `height` are whole cells: the engine refuses a fractional position.
 - The `Pane` render props carry `isFocused`, `bodyColumns`, `scroll.bodyRows` and `placement`, and the pane redraws when they change. `isFocused` does not say whether the board has the keys: in a terminal a click on the board sets it false (§4.3 P4).
@@ -131,7 +131,8 @@ Phase 0 ran a throwaway mod, `games-probe`, on 2026-10-11: two rounds in the des
   - `New`: never played.
   - `uses Claude`: 20 Questions, until the user has agreed (§10.14).
 - **Keys:** ↑/↓ move, Enter plays, `t` opens the milestones of the selected game, `T` opens all milestones. Clicking a row plays it.
-- **Desktop:** a 20×20 `Svg` icon at the start of each row (§9.1). Terminal: a one-character colored glyph (`■` Snake, `▦` Tetris, ...).
+- **Icons:** a tile 2 columns wide in the game's color with a glyph on it (`■` Snake, `◆` 2048, ...), on both surfaces (§9.1).
+- **Which games:** only the playable ones; the hub grows as phases ship. Its milestone total counts those games alone.
 - **Header:** total milestones unlocked across games.
 - **Narrow panes:** the rows are flex layouts, not fixed columns. Below 50 columns (the default desktop pane is 42) the headline stat is dropped and the milestone count and marker stay.
 - **Mobile and vscode:** the same list, without the keys or the play action, and a line saying where to play.
@@ -182,21 +183,21 @@ Playing a full game between a turn's start and its end counts toward the "Coffee
 ## 6. Architecture
 
 ```
- /games [name]         turn.start / turn.complete
+ /games [name]         prompt.edit / prompt.submit / turn.start / turn.complete
       │                        │
       ▼                        ▼
- hooks/register.tsx ── every $ call: command, pane, store, toasts, model
+ hooks/register.tsx ── every $ call: command, pane, store, toasts
       │   ▲
-props │   │ ui.message (post)
+props │   │ ui.message (a Batch of posts)
       ▼   │
- hooks/board.tsx ── the Client surface module: one per open game
+ hooks/board.tsx ── the Client surface module: the hub, each game, milestones, reset
       │
-      ├── games/<id>/logic.ts      rules and state (pure)
-      ├── games/<id>/view.ts       draws state with the element table (pure)
-      └── core/*                   canvas, palette, rng, keys (pure)
+      ├── hooks/catalog.ts         the 14 games, the playable ones, names and aliases
+      ├── games/<id>/logic.tsx     one game: rules, milestones, drawing (pure)
+      └── core/*                   game interface, canvas, palette, rng, store, milestones (pure)
 
- $.store ── profile, one record per game (§8)
- $.state ── which screen the pane shows, for redraws (§8.4)
+ $.store ── schema, profile, one record per game (§8)
+ $.state ── records, the screen asked for, the pause signal, the last post handled (§8.4)
 ```
 
 ### 6.1 Files
@@ -206,59 +207,59 @@ plugins/games/
   .claude-plugin/plugin.json      manifest, userConfig of §11
   README.md
   SPEC.md                         this file
-  assets/                         README previews
   hooks/hooks.json                { "modules": ["./register.tsx"] }
-  hooks/register.tsx              every engine call: /games, the pane, ui.message, store, toasts, turn hooks, 20 Questions model calls
-  hooks/board.tsx                 the Client surface module: picks the game by props.game, runs its loop, posts events
-  hooks/hub.tsx                   the hub and milestone views, drawn from data and callbacks (pure)
-  hooks/catalog.ts                the 14 games: id, name, group, glyph, icon SVG, headline stat (pure)
-  core/rng.ts                     mulberry32 with a serializable state
-  core/canvas.ts                  the cell canvas: a frame of colors packed into rows of Box runs (§9.3)
+  hooks/register.tsx              every engine call: /games, the pane, posts, store, toasts, pause signals
+  hooks/board.tsx                 the Client surface module: screens, input, the clock, the outbox
+  hooks/catalog.ts                the 14 games: id, name, group, glyph, color, aliases; which are playable; hub headlines
+  core/game.ts                    the GameDef interface every game implements, and key helpers
+  core/canvas.tsx                 the cell canvas: Box cells or half-blocks, packed into runs (§9.3)
   core/palette.ts                 board colors and each game's colors (§9.2)
-  core/keys.ts                    key names to actions, shared controls (§5.3)
-  core/store.ts                   record shapes, defaults, merge, migration (pure)
-  core/milestones.ts              evaluate(game, event, record) → unlocked ids (pure)
-  games/<id>/logic.ts             one per game: init, step, input, isOver, serialize, restore
-  games/<id>/view.ts              one per game: draw(state, elements, region)
-  games/<id>/milestones.ts        one per game: the table of §10 as data and predicates
-  words/wordle-answers.ts         curated answer list, exported as one string
-  words/wordle-guesses.ts         accepted guesses, exported as one string
-  words/hangman.ts                coding words by category
-  types/index.d.ts                $.state contract and record types
-  tests/*.test.ts                 logic, milestones, store merge, and the pane on terminal and desktop
+  core/rng.ts                     mulberry32 with a one-number state
+  core/store.ts                   record shapes, reading, and every change: outcome, save, unlock, reset (pure)
+  core/milestones.ts              the Milestone type, evaluate, progress (pure)
+  games/<id>/logic.tsx            one per game: state, rules, its milestone table, drawing
+  words/wordle-answers.ts         the answers, five letters a word in one string, order fixed at release
+  words/wordle-guesses.ts         accepted guesses, sorted, in one string
+  types/index.d.ts                record types, board props and posts, the $.state contract
+  tests/logic.test.ts             each game's rules, the store's merges, milestones
+  tests/pane.test.ts              /games and the board through the engine, on terminal and desktop
+  tests/helpers.ts                boots the mod against a test engine
 ```
 
-The engine follows `$` only into functions declared at the top of the hooks module, so every engine call lives in `register.tsx`. Every other module is pure and takes the element table and callbacks as arguments.
+A game is one `GameDef` (`core/game.ts`): `init`, `key`, `pointer`, `tick`, `over`, `facts`, `isUnderway`, `size`, `draw`, `status`, `controls`, `card`, plus its `milestones` and save version `v`. Its state is plain JSON, so a save is the state itself.
+
+The engine follows `$` only into functions declared at the top of the hooks module, so every engine call lives in `register.tsx`. Every other module is pure and takes the element table as an argument.
 
 ### 6.2 Messages between the board and the hooks module
 
-The board posts:
+The board posts (`types/index.d.ts`):
 
 ```ts
 type BoardPost =
-  | { type: 'save'; game: GameId; save: Save }                 // §8.2; throttled (§7.2)
-  | { type: 'event'; game: GameId; event: GameEvent }          // scored, won, lost, ...
-  | { type: 'over'; game: GameId; result: GameResult }         // a game ended
-  | { type: 'nav'; to: 'hub' | 'milestones' | GameId }         // h, t, a hub row
-  | { type: 'ask'; game: 'twenty'; answer: TwentyAnswer }      // 20 Questions only (§10.14)
+  | { type: 'save'; game: GameId; save: Save | null; facts: Facts; daily?: string }  // §7.2; facts check mid-game milestones
+  | { type: 'over'; game: GameId; outcome: Outcome }                              // a game ended
+  | { type: 'nav'; screen: Screen }                                               // where the board went
+  | { type: 'reset'; target: GameId | 'all'; milestones: boolean }
+  | { type: 'stale'; game: GameId }                                               // a save of another version (§7.3)
+  | { type: 'close' }                                                             // q
 ```
 
-The hooks module answers with new props:
+A post that lands in the frame of another replaces it (§4.2), so posts go out in a `Batch`: `{ type: 'batch', inst, items: [{ id, post }] }`, every post not yet acknowledged, up to 50. The hooks module handles each id once per board instance (`inst`) and writes the last one handled to `$.state` as `ack`; the next props carry it, and the board drops what was handled.
+
+The hooks module draws the board with these props:
 
 ```ts
 type BoardProps = {
-  game: GameId
-  save?: Save                    // given once, when the game opens with a save
-  best: Record<string, number>   // what the score line shows
-  unlocked: string[]             // milestone ids, for the game-over card
-  justUnlocked?: string[]        // shown on the game-over card, then cleared
-  paused?: boolean               // set when the player does something else (§7.2)
-  settings: { highContrast: boolean }
-  twenty?: TwentyView            // 20 Questions only
+  records: Records      // the store, read whole
+  request: Request      // a screen asked for by /games; n changes on every ask
+  pause: number         // changes when the player does something else (§7.2)
+  settings: Settings
+  room: Room            // surface, the pane's body columns and rows, dock or inline
+  today: string         // local date, for Wordle's daily
+  now: number
+  ack: Ack
 }
 ```
-
-`GameEvent` and `GameResult` are each game's own union, declared beside its `logic.ts`, carrying only what its milestones and stats need.
 
 ## 7. Progress and saving
 
@@ -285,7 +286,7 @@ type BoardProps = {
 - **A finished game** clears its `save`; the next open starts fresh.
 - **Resuming:** opening a game that has a `save` restores it.
   - Turn-based games continue at once.
-  - Arcade games open paused, with "p to resume" and a 3-2-1 countdown once pressed.
+  - Arcade games open paused, with "p or click to resume".
 - **Lost seconds:** an arcade game closed between saves loses at most 2 seconds of play. That's accepted.
 - **Save format:** each game's `serialize` returns plain JSON, including the generator state, and stays under 8 KB (Tetris, the largest, is about 1 KB).
 
@@ -366,13 +367,15 @@ type Save = { v: number; at: number; state: unknown }   // state is the game's s
 
 ### 8.4 Session state
 
-`$.state` holds only what the pane draws from: `screen` (`hub`, `milestones`, `all-milestones`, a `GameId`, or `reset`) and `selected` (the hub's highlighted row). It survives a hot reload; the store is the durable copy.
+`$.state` holds what the pane draws from and survives a hot reload; the store is the durable copy. Which screen is on show is the board's own state.
 
 ```ts
 interface PluginState {
   games: {
-    screen: Screen
-    selected: number
+    records: Records   // read from the store at start, after every write, and on /games
+    request: Request   // the screen /games asked for
+    pause: number      // bumped by the pause signals of §7.2
+    ack: Ack           // the last post handled (§6.2)
   }
 }
 ```
@@ -381,9 +384,7 @@ interface PluginState {
 
 ### 9.1 Icons and glyphs
 
-- **Desktop hub:** each game has a hand-written 20×20 SVG icon in `catalog.ts`: a snake's curve, a T piece, a brick row, a cactus, two paddles, a 2048 tile, a mine, a lit cell, two cards, a red disc, an X and O, a green letter tile, a noose, a question mark. Flat shapes in the game's main color, no text, no strokes thinner than 2px.
-- **Terminal:** one colored glyph per game: `■ ▦ ▤ ♣ ▮ ◆ ✸ ◼ ♠ ● ✕ ▣ ☐ ?`.
-- **Milestone badge** on desktop's game-over card: a 32×32 SVG star with the game's color.
+Each game's icon is a `Box` 2 columns × 1 row in its color with a dark glyph on it: `■ ▦ ▤ ♣ ▮ ◆ ✸ ◼ ♠ ● ✕ ▣ ☐ ?`. The same on both surfaces, since the hub is drawn inside the board's `Client`, which can't hold `Svg`. A milestone on the game-over card is a yellow border on the card.
 
 ### 9.2 Palette
 
@@ -532,7 +533,7 @@ Each game below lists its board, controls beyond the common ones (§5.3), rules,
 - **Controls:** arrows or WASD. On desktop, a swipe (pointer drag of at least 3 cells) works too.
 - **Rules:**
   - The standard game: tiles slide and merge, and a new tile (2, or 4 one time in ten) appears after each move that changed the board.
-  - Reaching 2048 offers "Keep going?".
+  - Reaching 2048 says "2048!" in the score line and play goes on; the game ends when no move is left, as a win if 2048 was made.
   - The game ends when no move changes the board.
 - **Animation:** tiles slide over 3 frames and a merged tile pops for 2. This is the one turn-based game that uses the frame clock.
 - **Saves:** grid, score, moves, won flag, rng.
@@ -661,7 +662,8 @@ Each game below lists its board, controls beyond the common ones (§5.3), rules,
   - **Daily:** one puzzle per local date. It is the same for everyone using this mod: answer index = days since 2026-01-01, modulo the list's length, with the list's order fixed at release.
   - **Practice:** unlimited puzzles from the same list, random, never today's.
   - **Hard mode:** a setting in the manifest, off by default. Revealed hints must be used in later guesses.
-  - **Word lists:** guesses not in the accepted list shake the row and don't count. Answers are a curated list of common words (about 2,300); accepted guesses are a larger list (about 13,000). Both are public-domain lists, checked into `words/`.
+  - **Word lists:** guesses not in the accepted list shake the row and don't count. Answers are 2,011 common words written for this mod and checked against ENABLE, shuffled once with a fixed seed so the dailies don't run alphabetically. Accepted guesses are every five-letter word in ENABLE (public domain) plus the answers: 8,636. Both are checked into `words/`.
+  - **Commands:** letters are guesses, so Wordle's commands take shift: `H` hub, `T` milestones, `Q` close, `N` a practice game.
 - **Saves:** daily and practice games separately; guesses, mode, date.
 - **Headline:** daily streak.
 
@@ -789,7 +791,7 @@ These live in the `profile` record's own `milestones`, and show at the top of th
 | Phase | Ships | Contents |
 |---|---|---|
 | 0 | nothing | Done 2026-10-11, desktop and terminal: the platform checks of §4.3, measurements in Appendix A |
-| 1 | 0.1.0 | Hub, store, milestones, saves, settings, commands; Snake, 2048, Minesweeper, Wordle; each seen on desktop and in a terminal's inline pane before release |
+| 1 | 0.1.0 | Built 2026-10-11 (Appendix B): hub, store, milestones, saves, settings, commands; Snake, 2048, Minesweeper, Wordle |
 | 2 | 0.2.0 | Lights Out, Memory, Connect Four, Tic-tac-toe, Hangman |
 | 3 | 0.3.0 | Tetris, Breakout, Dino Run, Pong; `notifyTurnEnd` pausing; the long-turn line |
 | 4 | 0.4.0 | 20 Questions; the "Coffee break" milestone |
@@ -838,3 +840,20 @@ The answers and decisions are in §4.3. These are the measurements behind them. 
 - Escape gave no sign a plugin could see, and the person found no way to close the board besides the pane's close mark.
 
 The probe was a throwaway mod outside the repo and was deleted after these were recorded.
+
+## Appendix B. Phase 1 notes
+
+Built on 2026-10-11 and played in the desktop app: two Snake games recorded with their best and "First bite", a 2048 game saved mid-way with "256" unlocked on a save, two Minesweeper games, and a Wordle daily started. 40 tests pass in the test engine on terminal and desktop.
+
+What changed from the plan while building it:
+
+- **Posts are batched.** A board's posts in one frame replace each other (§4.2), which lost the save posted when leaving a game for the hub. Every post now goes out in a `Batch` with the ones not yet acknowledged (§6.2).
+- **`h` is reserved.** JSX compiles to the global `h`, so a local named `h` (2048's tile height) hid it and the board crashed when drawing. The tests caught it; no module names a local `h`.
+- **No `Svg`.** The hub lives in the board's `Client`, so icons are glyph tiles on both surfaces (§9.1).
+- **The hub lists playable games only**, and its milestone total counts them: 29 for phase 1.
+- **The cards** (paused, game over, restart) are absolutely positioned children of the board's root `Box`, the one place both surfaces agree on (§4.3 P8).
+- **2048 doesn't stop at 2048** (§10.6). **Wordle's commands take shift** (§10.12).
+- **Minesweeper is a turn game with a clock** (`isTimed`): it saves on every move and pauses like an arcade game.
+- **The across-all-games milestones** (§10.15) wait for phase 4, when every game exists.
+- Not yet looked at by a person: the terminal (the tests cover it), and whether tile text reads well there (§4.3 P11).
+

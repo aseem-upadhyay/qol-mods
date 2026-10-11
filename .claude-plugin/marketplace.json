@@ -19,6 +19,11 @@
       "description": "A weekly coach for how you use Claude Code: one habit at a time from your own sessions, tips at your level, CLAUDE.md lines and skills worth making, and your progress over the weeks"
     },
     {
+      "name": "games",
+      "source": "./plugins/games",
+      "description": "Small, good-looking games in a side pane: /games for Snake, 2048, Minesweeper and Wordle, with milestones and your progress saved"
+    },
+    {
       "name": "worklog",
       "source": "./plugins/worklog",
       "description": "What you worked on, day by day, across every repo: /standup for the last work day, /worklog for any day, by PR and branch with the time spent"
