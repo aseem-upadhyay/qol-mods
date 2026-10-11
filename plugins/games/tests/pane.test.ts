@@ -22,16 +22,16 @@ describe('/games arguments', () => {
 
 for (const surface of SURFACES) {
   describe(surface, () => {
-    test('/games opens the hub on the four games', async ($, on) => {
+    test('/games opens the hub on the nine games', async ($, on) => {
       const { run, pane, seen } = await boot($, on, surface)
       expect((await run()).text).toBe('Opened games.')
       expect(seen.opened).toBe(1)
       const ui = await pane()
-      for (const name of ['Snake', '2048', 'Minesweeper', 'Wordle']) {
+      for (const name of ['Snake', '2048', 'Minesweeper', 'Lights Out', 'Memory', 'Connect Four', 'Tic-tac-toe', 'Wordle', 'Hangman']) {
         expect(await ui.find({ type: 'Text', text: new RegExp(` ${name}$`), ...IN })).toBeDefined()
       }
-      expect(await ui.find({ type: 'Text', text: '★ 0 of 29', ...IN })).toBeDefined()
-      expect(await ui.findAll({ type: 'Text', text: /New/, ...IN })).toHaveLength(4)
+      expect(await ui.find({ type: 'Text', text: '★ 0 of 58', ...IN })).toBeDefined()
+      expect(await ui.findAll({ type: 'Text', text: /New/, ...IN })).toHaveLength(9)
     })
 
     test('enter on a hub row opens that game, h goes back', async ($, on) => {
@@ -57,7 +57,7 @@ for (const surface of SURFACES) {
       await ui.key({ key: 'h', ...IN })
       await clock.settle()
       await ui.redraw()
-      expect(await ui.findAll({ type: 'Text', text: /New/, ...IN })).toHaveLength(3)
+      expect(await ui.findAll({ type: 'Text', text: /New/, ...IN })).toHaveLength(8)
       // Down from the middle row hits the bottom wall in 7 moves: no food on the way makes 0.
       expect(await ui.find({ type: 'Text', text: /best \d/, ...IN })).toBeDefined()
       expect(seen.toasts.every(t => t.startsWith('★ Snake'))).toBe(true)
@@ -122,7 +122,7 @@ for (const surface of SURFACES) {
 
     test('every board fits the pane', async ($, on) => {
       const { run, pane } = await boot($, on, surface)
-      for (const game of ['snake', '2048', 'mines', 'wordle']) {
+      for (const game of ['snake', '2048', 'mines', 'lights', 'memory', 'connect4', 'tictactoe', 'wordle', 'hangman']) {
         await run(game)
         const ui = await pane()
         await ui.resize({ columns: surface === 'desktop' ? 42 : 87, rows: surface === 'desktop' ? 45 : 17, in: 'board' })

@@ -98,7 +98,9 @@ async function onPost($: EngineInterface, post: BoardPost) {
     let unlocked: string[] = []
     await change($, post.game, r => {
       const ended = applyOutcome(r, post.outcome, def.lowerIsBetter, now)
-      unlocked = evaluate(def.milestones, post.outcome.facts, ended, true)
+      // The board's clock is the game's time, for milestones like "in under 40 seconds".
+      const facts = { seconds: Math.floor(post.outcome.ms / 1000), ...post.outcome.facts }
+      unlocked = evaluate(def.milestones, facts, ended, true)
 
       return unlock(ended, unlocked, now)
     })
@@ -183,7 +185,7 @@ export const register: Register = (on, options) => {
   on('session.start', async ($, e, next) => {
     await $.command.register({
       name: 'games',
-      description: 'Play a game in a side pane: Snake, 2048, Minesweeper, Wordle',
+      description: 'Play a game in a side pane: Snake, 2048, Minesweeper, Lights Out, Memory, Connect Four, Tic-tac-toe, Wordle, Hangman',
       argumentHint: '[game]',
       immediate: true,
     })

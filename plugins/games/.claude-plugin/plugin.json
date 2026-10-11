@@ -1,12 +1,12 @@
 {
   "name": "games",
-  "version": "0.1.0",
-  "description": "Small, good-looking games in a side pane: /games for Snake, 2048, Minesweeper and Wordle, with milestones and your progress saved",
+  "version": "0.2.0",
+  "description": "Small, good-looking games in a side pane: /games for Snake, 2048, Minesweeper, Lights Out, Memory, Connect Four, Tic-tac-toe, Wordle and Hangman, with milestones and your progress saved",
   "author": { "name": "Aseem Upadhyay", "url": "https://github.com/aseem-upadhyay" },
   "homepage": "https://github.com/aseem-upadhyay/qol-mods/tree/main/plugins/games",
   "repository": "https://github.com/aseem-upadhyay/qol-mods",
   "license": "MIT",
-  "keywords": ["games", "snake", "2048", "minesweeper", "wordle", "milestones"],
+  "keywords": ["games", "snake", "2048", "minesweeper", "lights-out", "memory", "connect-four", "tic-tac-toe", "wordle", "hangman", "milestones"],
   "types": "./types/index.d.ts",
   "userConfig": {
     "notifyTurnEnd": {

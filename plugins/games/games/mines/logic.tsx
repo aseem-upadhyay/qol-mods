@@ -291,6 +291,6 @@ export const mines: GameDef<MinesState> = {
           title: 'Cleared!',
           lines: [`${name} in ${time(s.ms)}`, old === undefined || seconds < old ? 'New best!' : `Best ${time(old * 1000)}`],
         }
-      : { title: 'Boom', lines: [`${name} · ${time(s.ms)}`, 'r to try again'] }
+      : { title: 'Boom', lines: [`${name} · ${time(s.ms)}`] }
   },
 }

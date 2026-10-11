@@ -298,9 +298,10 @@ export const wordle: GameDef<WordleState> = {
     s.isWon
       ? {
           title: s.guesses.length === 1 ? 'Hole in one!' : `Solved in ${s.guesses.length}`,
-          lines: [s.answer.toUpperCase(), s.date !== undefined ? 'Daily done · N for practice' : 'N for another'],
+          lines: [s.answer.toUpperCase(), ...(s.date !== undefined ? ['daily done'] : [])],
+          hint: s.date !== undefined ? 'N practice · H hub' : 'N another · H hub',
         }
-      : { title: `The word was ${s.answer.toUpperCase()}`, lines: ['N for another'] },
+      : { title: `The word was ${s.answer.toUpperCase()}`, lines: [], hint: 'N another · H hub' },
 
   daily: s => s.date,
 }

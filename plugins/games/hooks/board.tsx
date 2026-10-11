@@ -505,7 +505,8 @@ function drawGame(local: Local, play: Play, side: Side, surface: ClientSurface<L
   const props = side.props
   const room = boardRoom(props, surface.columns)
   const size = def.size(play.s, room)
-  const isDim = play.isPaused || play.outcome !== undefined || play.confirm !== undefined
+  // A finished board stays bright: the result takes the controls line (SPEC.md §5.3).
+  const isDim = play.isPaused || play.confirm !== undefined
   const boardWidth = Math.max(size.columns, Math.min(width, 42))
   side.boardAt = { top: 1, left: 0 }
 
@@ -517,11 +518,26 @@ function drawGame(local: Local, play: Play, side: Side, surface: ClientSurface<L
 
   let card: { title: string; lines: string[]; hint: string } | undefined
   if (play.confirm === 'restart') card = { title: 'Start a new game?', lines: ['This one is not saved.'], hint: 'y yes · any key no' }
-  else if (play.confirm === 'practice') card = { title: 'New practice game?', lines: ['This one is not saved.'], hint: 'y yes · any key no' }
-  else if (play.outcome) {
+  else if (play.confirm === 'practice') card = { title: 'Start a new one?', lines: ['This one is not saved.'], hint: 'y yes · any key no' }
+  else if (play.isPaused && !play.outcome) card = { title: 'Paused', lines: [], hint: 'p or click to resume' }
+
+  let result: RenderElement | undefined
+  if (play.outcome) {
     const c = def.card(play.s, play.outcome, play.best)
-    card = { ...c, hint: def.isWordy ? 'N new · H hub' : 'r again · h hub' }
-  } else if (play.isPaused) card = { title: 'Paused', lines: [], hint: 'p or click to resume' }
+    const hint = c.hint ?? (def.isWordy ? 'N new · H hub' : 'r again · h hub')
+    result = (
+      <Box key="result" flexDirection="row" width={boardWidth} height={1}>
+        <Text bold color={play.outcome.result === 'won' ? YELLOW : INK} wrap="truncate">
+          {c.title}
+        </Text>
+        <Text color={INK} wrap="truncate">
+          {c.lines.length ? ` · ${fit(c.lines, Math.max(0, boardWidth - c.title.length - hint.length - 6))}` : ''}
+        </Text>
+        <Box flexGrow={1} />
+        <Text dimColor>{hint}</Text>
+      </Box>
+    )
+  }
 
   const cardWidth = Math.min(Math.max(size.columns, 24), 30)
   const cardRows = card ? card.lines.length + 4 : 0
@@ -532,7 +548,7 @@ function drawGame(local: Local, play: Play, side: Side, surface: ClientSurface<L
       <Box key="board" height={size.rows} width={size.columns}>
         {def.draw(play.s, { E: surface.elements, room, settings: props.settings, dim: isDim })}
       </Box>
-      {footer(surface, controls, boardWidth)}
+      {result ?? footer(surface, controls, boardWidth)}
       {card ? (
         // A child of the root is placed from the region's corner on both surfaces (SPEC.md §4.3 P8).
         <Box
@@ -544,7 +560,7 @@ function drawGame(local: Local, play: Play, side: Side, surface: ClientSurface<L
           flexDirection="column"
           alignItems="center"
           borderStyle="round"
-          borderColor={play.outcome?.result === 'won' ? YELLOW : GRAY}
+          borderColor={GRAY}
           backgroundColor={EDGE}
         >
           <Text bold color={INK}>

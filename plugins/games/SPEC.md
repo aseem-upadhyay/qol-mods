@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | Phase 1 built: 0.1.0 with Snake, 2048, Minesweeper, Wordle (Appendix B); phase 2 not started |
+| Status | Phases 1 and 2 built: 0.2.0 with nine games (Appendices B and C); phase 3 not started |
 | Author | Aseem Upadhyay, drafted with Claude |
 | Date | 2026-10-11 |
 | Lives in | `plugins/games/` in qol-mods |
@@ -155,7 +155,7 @@ Phase 0 ran a throwaway mod, `games-probe`, on 2026-10-11: two rounds in the des
 - **Below the board:** one dim line of controls. It never wraps: on a narrow pane the least important controls drop off the end.
 - **Common keys** in every game: `p` pause, `r` restart (asks "Restart? y/n" over the board if a game is under way), `h` back to the hub, `t` this game's milestones, `q` close the pane (the game is saved first). Escape gives the keyboard back to the prompt and leaves the pane open. Each game adds its own (§10).
 - **Pausing:** a paused game dims the board and shows "Paused · p to resume" in its middle.
-- **Game over:** the board stays and a card covers its middle: the result, "New best!" when it is, any milestones unlocked this game, and `r again · h hub`.
+- **Game over:** the board stays, undimmed, so the final position can be read, and the controls line becomes the result: a bold title ("You win!", "Cleared!"), a detail or two ("new best!"), and the keys to go on (`r again · h hub`). Milestones unlocked show as toasts. Only pausing and "Start a new game?" cover the board with a card.
 
 ### 5.4 Milestones
 
@@ -578,7 +578,7 @@ Each game below lists its board, controls beyond the common ones (§5.3), rules,
 ### 10.8 Lights Out
 
 - **Board:** 5×5 cells, each 4 columns × 2 rows (20 × 10).
-- **Controls:** click a cell, or arrows and space. `u` undoes one move.
+- **Controls:** click a cell, or arrows and space. `u` undoes one press; the undo counts as a move, so par stays honest. `r` after a clear goes to the next level.
 - **Rules:**
   - Pressing a cell toggles it and its four neighbours. Turn every light off to clear the level.
   - Level n starts from n + 2 random presses from the solved board, seeded by the level, so every level is solvable and the same for everyone.
@@ -621,8 +621,8 @@ Each game below lists its board, controls beyond the common ones (§5.3), rules,
 - **Controls:** click a column, or ←→ and space. `1` `2` `3` pick difficulty before the first move.
 - **Rules:**
   - You're red and move first; the bot is yellow.
-  - Bot strength: Easy plays a random legal move, but takes any immediate win and blocks any immediate loss. Normal is minimax to depth 4. Hard is depth 8 with alpha-beta and a center-first move order.
-  - A disc drops over 4 frames. The winning four flash.
+  - Bot strength: Easy plays a random legal move, but takes any immediate win and blocks any immediate loss. Normal is negamax to depth 4. Hard is depth 7 with alpha-beta and a center-first move order: the bot thinks on the drawing thread, and depth 7 stays well under a second (tested).
+  - A disc falls a row a frame. The winning four are drawn brighter. The bot waits 0.4 seconds before it moves, so its move can be seen.
 - **Saves:** grid, turn, difficulty.
 - **Headline:** wins.
 
@@ -638,7 +638,7 @@ Each game below lists its board, controls beyond the common ones (§5.3), rules,
 ### 10.11 Tic-tac-toe
 
 - **Board:** 3×3 cells, each 7 columns × 3 rows, with thin lines between them.
-- **Controls:** click, or `1`–`9` as a phone keypad, or arrows and space.
+- **Controls:** click, or `1`–`9` as a phone keypad, or arrows and space. `d` switches Easy and Perfect before your first move.
 - **Rules:**
   - Turns alternate between you and the bot, and you swap who starts every game.
   - Easy plays randomly but takes wins; Perfect plays minimax and never loses.
@@ -688,7 +688,8 @@ The daily streak counts consecutive dates solved; a missed date resets it, and a
   - 6 misses allowed. The category is shown: Languages, Tools, Concepts, Commands.
   - Words come from `words/hangman.ts`, about 400, all coding terms: `typescript`, `rebase`, `closure`, `grep`, `kubernetes`, ...
   - No repeats until the list is used up.
-- **Saves:** word index, guesses, the used-word set (a bitset string).
+- **Saves:** word index and guesses. No repeats comes from the deal: every word in one fixed shuffle, and a counter (`extra.dealt`) of words finished; a word given up on comes back next.
+- **Commands:** letters are guesses, so like Wordle its commands take shift; `N` deals the next word.
 - **Headline:** words solved.
 
 | Milestone | Goal |
@@ -792,7 +793,7 @@ These live in the `profile` record's own `milestones`, and show at the top of th
 |---|---|---|
 | 0 | nothing | Done 2026-10-11, desktop and terminal: the platform checks of §4.3, measurements in Appendix A |
 | 1 | 0.1.0 | Built 2026-10-11 (Appendix B): hub, store, milestones, saves, settings, commands; Snake, 2048, Minesweeper, Wordle |
-| 2 | 0.2.0 | Lights Out, Memory, Connect Four, Tic-tac-toe, Hangman |
+| 2 | 0.2.0 | Built 2026-10-11 (Appendix C): Lights Out, Memory, Connect Four, Tic-tac-toe, Hangman |
 | 3 | 0.3.0 | Tetris, Breakout, Dino Run, Pong; `notifyTurnEnd` pausing; the long-turn line |
 | 4 | 0.4.0 | 20 Questions; the "Coffee break" milestone |
 | Later | — | Sound on milestones (`$.audio.play`, off by default); the mobile app once it can draw a `Client`; a "You ask" mode for 20 Questions |
@@ -856,4 +857,18 @@ What changed from the plan while building it:
 - **Minesweeper is a turn game with a clock** (`isTimed`): it saves on every move and pauses like an arcade game.
 - **The across-all-games milestones** (§10.15) wait for phase 4, when every game exists.
 - Not yet looked at by a person: the terminal (the tests cover it), and whether tile text reads well there (§4.3 P11).
+
+## Appendix C. Phase 2 notes
+
+Built on 2026-10-11. 54 tests pass in the test engine: each new game's rules, Connect Four's bot taking wins and blocking at every level and thinking at Hard in well under a second, Tic-tac-toe's Perfect never losing against every line of play, and all nine boards drawn in the pane on terminal and desktop.
+
+What changed from the plan while building it:
+
+- **Results sit under the board** (§5.3). A card over the middle hid what mattered in the new games: the winning four, the last Hangman word, where the mines were. The finished board stays bright and the controls line becomes the result, for every game.
+- **Milestones get the game's time.** The hooks module adds `seconds`, from the board's clock, to an ended game's facts, so Memory's "Speedy" needs no timer of its own.
+- **Hangman deals from a counter** instead of a saved set of used words (§10.13), and its 404 words were written for this mod.
+- **Connect Four's Hard looks 7 moves ahead**, not 8 (§10.10).
+- **Memory has no rounded borders:** a border inside a card 2 rows tall leaves no room for its face. Cards are colored blocks.
+- The hub's milestone total is 58 across the nine games. In a terminal's inline pane the hub takes 16 of its 17 rows.
+- A JSX gotcha came back: Memory's card height was named `h` as in 2048 (Appendix B), and was caught before a test ran. Locals named `h` stay banned.
 

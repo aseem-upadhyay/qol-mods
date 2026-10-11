@@ -21,7 +21,7 @@
     {
       "name": "games",
       "source": "./plugins/games",
-      "description": "Small, good-looking games in a side pane: /games for Snake, 2048, Minesweeper and Wordle, with milestones and your progress saved"
+      "description": "Small, good-looking games in a side pane: /games for Snake, 2048, Minesweeper, Lights Out, Memory, Connect Four, Tic-tac-toe, Wordle and Hangman, with milestones and your progress saved"
     },
     {
       "name": "worklog",
