@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>repo-spend · Know what every repo costs you in Claude Code</title>
   <meta name="description" content="repo-spend is a free, open-source Claude Code mod that shows what each repo costs, live above the prompt: running total, today, last 7 days and burn rate.">
+  <meta name="author" content="Aseem Upadhyay">
   <meta name="robots" content="index, follow, max-image-preview:large">
   <meta property="og:title" content="repo-spend · Know what every repo costs you in Claude Code">
   <meta property="og:site_name" content="Quality of Life Mods">
@@ -13,14 +14,19 @@
   <meta property="og:locale" content="en_US">
   <meta property="og:url" content="https://qolmods.dev/repo-spend/">
   <meta property="og:image" content="https://qolmods.dev/assets/repo-spend/og.png">
+  <meta property="og:image:type" content="image/png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="627">
   <meta property="og:image:alt" content="repo-spend: Know what every repo costs you in Claude Code. A bar above the Claude prompt shows $1,284.50 spent on my-app in the last 3 months, $12.30 today, and $6.04/hr this session.">
   <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="repo-spend · Know what every repo costs you in Claude Code">
+  <meta name="twitter:description" content="See what every repo costs you in Claude Code, live, right above the prompt. Free, open source, and nothing leaves your machine.">
+  <meta name="twitter:image" content="https://qolmods.dev/assets/repo-spend/og.png">
   <meta name="twitter:image:alt" content="repo-spend: Know what every repo costs you in Claude Code. A bar above the Claude prompt shows $1,284.50 spent on my-app in the last 3 months, $12.30 today, and $6.04/hr this session.">
   <link rel="canonical" href="https://qolmods.dev/repo-spend/">
   <meta name="theme-color" content="#D97757">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
   <link rel="stylesheet" href="../style.css">
   <script type="application/ld+json">
   {
@@ -30,13 +36,31 @@
         "@type": "WebSite",
         "name": "Quality of Life Mods",
         "alternateName": "qol-mods",
-        "url": "https://qolmods.dev/"
+        "url": "https://qolmods.dev/",
+        "@id": "https://qolmods.dev/#website",
+        "description": "Free, open-source mods that make Claude Code even better.",
+        "inLanguage": "en",
+        "publisher": {
+          "@type": "Person",
+          "name": "Aseem Upadhyay",
+          "url": "https://github.com/aseem-upadhyay"
+        }
       },
       {
         "@type": "BreadcrumbList",
         "itemListElement": [
-          { "@type": "ListItem", "position": 1, "name": "Quality of Life Mods", "item": "https://qolmods.dev/" },
-          { "@type": "ListItem", "position": 2, "name": "repo-spend", "item": "https://qolmods.dev/repo-spend/" }
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Quality of Life Mods",
+            "item": "https://qolmods.dev/"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "repo-spend",
+            "item": "https://qolmods.dev/repo-spend/"
+          }
         ]
       },
       {
@@ -45,11 +69,29 @@
         "description": "A Claude Code mod that shows what each repo costs, live above the prompt: running total, today, last 7 days and this session's burn rate.",
         "url": "https://qolmods.dev/repo-spend/",
         "applicationCategory": "DeveloperApplication",
-        "operatingSystem": "macOS, Windows, Linux",
+        "operatingSystem": "macOS, Linux",
         "softwareVersion": "0.5.1",
         "image": "https://qolmods.dev/assets/repo-spend/og.png",
         "license": "https://github.com/aseem-upadhyay/qol-mods/blob/main/LICENSE",
-        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        },
+        "applicationSubCategory": "Claude Code plugin",
+        "author": {
+          "@type": "Person",
+          "name": "Aseem Upadhyay",
+          "url": "https://github.com/aseem-upadhyay"
+        },
+        "isAccessibleForFree": true,
+        "isPartOf": {
+          "@id": "https://qolmods.dev/#website"
+        },
+        "installUrl": "https://qolmods.dev/repo-spend/#install",
+        "codeRepository": "https://github.com/aseem-upadhyay/qol-mods/tree/main/plugins/repo-spend",
+        "screenshot": "https://qolmods.dev/assets/repo-spend/preview-desktop.svg",
+        "softwareRequirements": "Claude Code, python3 3.9 or newer"
       }
     ]
   }
