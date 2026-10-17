@@ -133,6 +133,34 @@ kbd {
   color: var(--accent);
 }
 
+/* "qol-mods / coach" on a mod's own page */
+.crumbs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.crumbs .brand {
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.crumbs .brand:hover {
+  color: var(--text);
+}
+
+.crumb-sep {
+  color: var(--border);
+  font-size: 18px;
+}
+
+.crumb-here {
+  font-weight: 700;
+  font-size: 18px;
+  white-space: nowrap;
+}
+
 .nav nav {
   display: flex;
   gap: 22px;
@@ -450,6 +478,134 @@ kbd {
   margin: 8px 0 0;
 }
 
+/* The mods, on the home page */
+.mod-cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+  margin-top: 44px;
+}
+
+.mod-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  color: inherit;
+  text-decoration: none;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.mod-card:hover,
+.mod-card:focus-visible {
+  transform: translateY(-2px);
+  border-color: var(--accent);
+  box-shadow: var(--shadow);
+}
+
+.mod-card-shot {
+  height: 240px;
+  background: var(--code-bg);
+  border-bottom: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.mod-card-shot img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top center;
+}
+
+/* A wide preview shows whole rather than cropped */
+.mod-card-shot .fit-whole {
+  object-fit: contain;
+  object-position: center;
+}
+
+.mod-card-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  padding: 24px 28px 26px;
+}
+
+.mod-card-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.mod-card-name {
+  font-family: var(--mono);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--accent-strong);
+}
+
+.badge {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.badge-quiet {
+  background: var(--bg-alt);
+  color: var(--muted);
+  border: 1px solid var(--border);
+  font-family: var(--mono);
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 600;
+}
+
+.mod-card h3 {
+  font-size: 22px;
+  margin-top: 12px;
+}
+
+.mod-card p {
+  color: var(--muted);
+  font-size: 16px;
+  margin: 10px 0 0;
+}
+
+.mod-card-more {
+  margin-top: auto;
+  padding-top: 20px;
+  font-weight: 600;
+  color: var(--accent-strong);
+}
+
+.mod-card-more span {
+  display: inline-block;
+  transition: transform 0.15s ease;
+}
+
+.mod-card:hover .mod-card-more span {
+  transform: translateX(3px);
+}
+
+.more-soon {
+  margin: 28px auto 0;
+  text-align: center;
+  color: var(--muted);
+  font-size: 15px;
+}
+
+/* A tall preview, such as coach's report */
+.shot-tall {
+  max-width: 720px;
+}
+
 /* Section intros */
 .section-lede {
   color: var(--muted);
@@ -587,6 +743,12 @@ kbd {
   }
 }
 
+@media (max-width: 760px) {
+  .mod-cards {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 @media (max-width: 640px) {
   .cards,
   .parts {
@@ -621,7 +783,9 @@ kbd {
     scroll-behavior: auto;
   }
 
-  .btn {
+  .btn,
+  .mod-card,
+  .mod-card-more span {
     transition: none;
   }
 }

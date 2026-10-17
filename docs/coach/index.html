@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>coach · Get better at Claude Code, one habit a week</title>
+  <meta name="description" content="coach is a free, open-source Claude Code mod that reads your own sessions and picks one habit a week to work on, with tips at your level and CLAUDE.md lines and skills worth making.">
+  <meta name="robots" content="index, follow, max-image-preview:large">
+  <meta property="og:title" content="coach · Get better at Claude Code, one habit a week">
+  <meta property="og:site_name" content="Quality of Life Mods">
+  <meta property="og:description" content="A weekly coach built from your own Claude Code sessions: one habit at a time, tips at your level, and your progress over the weeks. Free, open source, and local first.">
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="en_US">
+  <meta property="og:url" content="https://qolmods.dev/coach/">
+  <meta property="og:image" content="https://qolmods.dev/assets/coach/og.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="627">
+  <meta property="og:image:alt" content="coach: Get better at Claude Code, one habit a week. The habit of the week, start fresh when you switch topics, at 2 of 3 switches this week.">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image:alt" content="coach: Get better at Claude Code, one habit a week. The habit of the week, start fresh when you switch topics, at 2 of 3 switches this week.">
+  <link rel="canonical" href="https://qolmods.dev/coach/">
+  <meta name="theme-color" content="#D97757">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../style.css">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebSite",
+        "name": "Quality of Life Mods",
+        "alternateName": "qol-mods",
+        "url": "https://qolmods.dev/"
+      },
+      {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "Quality of Life Mods", "item": "https://qolmods.dev/" },
+          { "@type": "ListItem", "position": 2, "name": "coach", "item": "https://qolmods.dev/coach/" }
+        ]
+      },
+      {
+        "@type": "SoftwareApplication",
+        "name": "coach",
+        "description": "A Claude Code mod that reads your own sessions and coaches one habit a week, with tips at your level, CLAUDE.md lines and skills worth making, and your progress over the weeks.",
+        "url": "https://qolmods.dev/coach/",
+        "applicationCategory": "DeveloperApplication",
+        "operatingSystem": "macOS, Linux",
+        "softwareVersion": "0.2.1",
+        "image": "https://qolmods.dev/assets/coach/og.png",
+        "license": "https://github.com/aseem-upadhyay/qol-mods/blob/main/LICENSE",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+      }
+    ]
+  }
+  </script>
+</head>
+<body>
+  <header class="nav">
+    <div class="wrap nav-inner">
+      <div class="crumbs">
+        <a class="brand" href="../"><span class="brand-mark" aria-hidden="true">◆</span> qol-mods</a>
+        <span class="crumb-sep" aria-hidden="true">/</span>
+        <a class="crumb-here brand" href="#top" aria-current="page">coach</a>
+      </div>
+      <nav aria-label="Sections">
+        <a href="#benefits">Why</a>
+        <a href="#using">Using it</a>
+        <a href="#install">Install</a>
+        <a href="https://github.com/aseem-upadhyay/qol-mods/releases?q=coach&amp;expanded=true">Changelog</a>
+        <a class="nav-gh" href="https://github.com/aseem-upadhyay/qol-mods/tree/main/plugins/coach">GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="top">
+    <!-- Hero -->
+    <section class="hero">
+      <div class="wrap">
+        <a class="release" href="https://github.com/aseem-upadhyay/qol-mods/releases/tag/coach-v0.2.1"><span class="release-tag">v0.2.1</span> coach is out: in the desktop app and the terminal <span aria-hidden="true">→</span></a>
+        <p class="eyebrow">A mod for Claude Code</p>
+        <h1>Get better at Claude Code,<br><span class="accent">one habit a week.</span></h1>
+        <p class="lede">coach reads the sessions you've already had, picks the one habit that would help you most, and tracks how you're doing. Plus tips at your level, and CLAUDE.md lines and skills worth making.</p>
+        <div class="hero-cta">
+          <a class="btn btn-primary" href="#install">Install in one command</a>
+          <a class="btn btn-ghost" href="https://github.com/aseem-upadhyay/qol-mods/tree/main/plugins/coach">View on GitHub</a>
+        </div>
+        <ul class="trust" aria-label="At a glance">
+          <li><span aria-hidden="true">🔒</span> Local first, sends nothing</li>
+          <li><span aria-hidden="true">⚡</span> First report in seconds</li>
+          <li><span aria-hidden="true">🖥️</span> Terminal and desktop app</li>
+        </ul>
+
+        <figure class="shot shot-hero shot-tall" data-tabs>
+          <div class="tabs" role="tablist" aria-label="Preview">
+            <button role="tab" aria-selected="true" aria-controls="co-desktop" id="co-desktop-tab">Desktop app</button>
+            <button role="tab" aria-selected="false" aria-controls="co-cli" id="co-cli-tab" tabindex="-1">Terminal</button>
+          </div>
+          <div class="shot-frame">
+            <img role="tabpanel" id="co-desktop" aria-labelledby="co-desktop-tab" src="../assets/coach/preview-desktop.svg" width="780" height="1010" alt="The coach report in the Claude desktop app. A coral card: your week with Claude, 28 Sep to 4 Oct, week 4; 10 sessions, 18 prompts, $6.14 spent, up 40% on the four weeks before, and $0.25 for a typical prompt, down 15%; beside them, spend by day. Below, the habit of the week, start fresh when you switch topics, with a ring at 33% against a goal of 70% and two of three switches done this week; then eight weeks of progress as small charts.">
+            <img role="tabpanel" id="co-cli" aria-labelledby="co-cli-tab" src="../assets/coach/preview-cli.svg" width="706" height="832" hidden alt="A Claude Code terminal with the coach report open: last week's sessions, prompts and spend in four framed tiles; the habit of the week, start fresh when you switch topics, 1 of 3 switches against a goal of 70%, with the session it came from; and two CLAUDE.md lines to copy. Above the prompt, the coach line keeps the habit in view: 2 of 3 switches this week.">
+          </div>
+          <figcaption>Figures are illustrative.</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <!-- Benefits -->
+    <section class="together" id="benefits" aria-labelledby="benefits-title">
+      <div class="wrap">
+        <h2 id="benefits-title">Why you'll want it</h2>
+        <p class="section-lede">Most advice about Claude Code is generic. coach's comes from your own sessions, so every tip shows you where it came from.</p>
+        <div class="cards">
+          <article class="card">
+            <span class="card-icon" aria-hidden="true">🎯</span>
+            <h3>One habit at a time</h3>
+            <p>Each week coach picks the habit that would help you most, shows the session it came from and what it cost, and tells you what to try. It sticks with a habit for two weeks and retires it once you've got it.</p>
+          </article>
+          <article class="card">
+            <span class="card-icon" aria-hidden="true">📚</span>
+            <h3>Teach Claude your project</h3>
+            <p>How to run the tests, the package manager it gets wrong, the corrections you keep making: CLAUDE.md lines ready to copy, with the evidence. Suggestions only; coach never writes your CLAUDE.md.</p>
+          </article>
+          <article class="card">
+            <span class="card-icon" aria-hidden="true">🧩</span>
+            <h3>Skills from prompts you repeat</h3>
+            <p>A prompt you keep typing in nearly the same words becomes a suggested skill, with a template and the follow-up you usually add. "Make it a skill" puts the request in the prompt box for you.</p>
+          </article>
+          <article class="card">
+            <span class="card-icon" aria-hidden="true">📈</span>
+            <h3>Progress over the weeks</h3>
+            <p>Cost per prompt, corrections, oversized sessions and your habit, week by week. Finished weeks are kept, so the history survives Claude Code deleting old logs.</p>
+          </article>
+          <article class="card">
+            <span class="card-icon" aria-hidden="true">🪜</span>
+            <h3>Tips at your level</h3>
+            <p>Beginners see the basics; experienced users see advanced tips. Every tip is backed by your own sessions and retires once you've taken it up.</p>
+          </article>
+          <article class="card">
+            <span class="card-icon" aria-hidden="true">🔒</span>
+            <h3>Your sessions stay yours</h3>
+            <p>It reads the logs Claude Code already keeps and makes no network calls. Grading prompts with a model is opt-in, about a cent a week with Haiku.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- Using it -->
+    <section class="mod mod-alt" id="using" aria-labelledby="using-title">
+      <div class="wrap">
+        <h2 id="using-title" class="center">A report, a line, and a few commands</h2>
+        <p class="section-lede">Open the report whenever you like. The rest of the week, a line above the prompt keeps your habit in view.</p>
+        <figure class="shot shot-hero shot-tall">
+          <div class="shot-frame">
+            <img src="../assets/coach/preview-bar.svg" width="706" height="296" loading="lazy" alt="The coach line above the prompt in four states: a report ready to read; the habit of the week with this week's progress, 2 of 3; a live hint about a topic change in a big session; and the short form it falls back to when the terminal is narrow.">
+          </div>
+        </figure>
+        <dl class="parts">
+          <div><dt><span class="chip">/coach</span></dt><dd>Opens the report on your last full week: the headline numbers, the habit, your best prompt, and your progress.</dd></div>
+          <div><dt><span class="chip">/coach tips</span></dt><dd>Every tip worth showing now, each with the sessions behind it.</dd></div>
+          <div><dt><span class="chip">/coach claude-md</span></dt><dd>Every CLAUDE.md suggestion, per project, ready to copy.</dd></div>
+          <div><dt><span class="chip">/coach skills</span></dt><dd>Every prompt you type often enough to be worth a skill.</dd></div>
+          <div><dt><span class="chip">/coach bar · /coach hints</span></dt><dd>Hide or show the line above the prompt, and turn live hints on or off.</dd></div>
+          <div><dt><span class="chip">"why did my cost jump?"</span></dt><dd>Ask Claude about your week in plain words. coach gives it a tool that reads the report.</dd></div>
+        </dl>
+      </div>
+    </section>
+
+    <!-- Install -->
+    <section class="install" id="install" aria-labelledby="install-title">
+      <div class="wrap install-inner">
+        <h2 id="install-title">Install in under a minute</h2>
+        <ol class="steps">
+          <li>
+            <p>In a Claude Code terminal session, type this at the prompt:</p>
+            <div class="install-inline install-big">
+              <code>/plugin install coach --marketplace aseem-upadhyay/qol-mods</code>
+              <button class="copy" type="button" data-copy="/plugin install coach --marketplace aseem-upadhyay/qol-mods">Copy</button>
+            </div>
+          </li>
+          <li><p>Answer <kbd>y</kbd> to add the marketplace, then pick the <strong>user</strong> scope so coach loads in every session.</p></li>
+          <li><p>That's it. Your first report is ready a few seconds after your next session starts, because coach reads the logs you already have. Type <code>/coach</code> to open it.</p></li>
+        </ol>
+        <p class="reqs">Needs macOS or Linux and <code>python3</code> 3.9 or newer. Windows isn't supported yet.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="wrap footer-inner">
+      <p>coach is part of <a href="../">Quality of Life Mods</a> by <a href="https://github.com/aseem-upadhyay">Aseem Upadhyay</a> · <a href="https://github.com/aseem-upadhyay/qol-mods/blob/main/LICENSE">MIT license</a> · <a href="https://github.com/aseem-upadhyay/qol-mods/releases?q=coach&amp;expanded=true">Changelog</a></p>
+      <p class="muted">Not affiliated with Anthropic. Claude and Claude Code are trademarks of Anthropic.</p>
+    </div>
+  </footer>
+
+  <script src="../site.js"></script>
+</body>
+</html>
