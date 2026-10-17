@@ -2,6 +2,14 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://qolmods.dev/</loc>
-    <lastmod>2026-10-11</lastmod>
+    <lastmod>2026-10-17</lastmod>
+  </url>
+  <url>
+    <loc>https://qolmods.dev/coach/</loc>
+    <lastmod>2026-10-17</lastmod>
+  </url>
+  <url>
+    <loc>https://qolmods.dev/repo-spend/</loc>
+    <lastmod>2026-10-17</lastmod>
   </url>
 </urlset>

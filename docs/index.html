@@ -3,21 +3,21 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>repo-spend · Know what every repo costs you in Claude Code</title>
-  <meta name="description" content="repo-spend is a free, open-source Claude Code mod that shows what each repo costs, live above the prompt: running total, today, last 7 days and burn rate.">
+  <title>Quality of Life Mods · Mods that make Claude Code even better</title>
+  <meta name="description" content="Free, open-source mods for Claude Code. repo-spend shows what each repo costs, live above the prompt. coach picks one habit a week from your own sessions.">
   <meta name="robots" content="index, follow, max-image-preview:large">
-  <meta property="og:title" content="repo-spend · Know what every repo costs you in Claude Code">
+  <meta property="og:title" content="Quality of Life Mods · Mods that make Claude Code even better">
   <meta property="og:site_name" content="Quality of Life Mods">
-  <meta property="og:description" content="See what every repo costs you in Claude Code, live, right above the prompt. Free, open source, and nothing leaves your machine.">
+  <meta property="og:description" content="Free, open-source mods for Claude Code, each one making the Claude Code experience better. Install with one command; nothing leaves your machine.">
   <meta property="og:type" content="website">
   <meta property="og:locale" content="en_US">
   <meta property="og:url" content="https://qolmods.dev/">
-  <meta property="og:image" content="https://qolmods.dev/assets/repo-spend/og.png">
+  <meta property="og:image" content="https://qolmods.dev/assets/og.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="627">
-  <meta property="og:image:alt" content="repo-spend: Know what every repo costs you in Claude Code. A bar above the Claude prompt shows $1,284.50 spent on my-app in the last 3 months, $12.30 today, and $6.04/hr this session.">
+  <meta property="og:image:alt" content="Quality of Life Mods: mods that make Claude Code even better. Cards for repo-spend, what every repo costs you, and coach, one habit a week.">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:image:alt" content="repo-spend: Know what every repo costs you in Claude Code. A bar above the Claude prompt shows $1,284.50 spent on my-app in the last 3 months, $12.30 today, and $6.04/hr this session.">
+  <meta name="twitter:image:alt" content="Quality of Life Mods: mods that make Claude Code even better. Cards for repo-spend, what every repo costs you, and coach, one habit a week.">
   <link rel="canonical" href="https://qolmods.dev/">
   <meta name="theme-color" content="#D97757">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
@@ -33,16 +33,12 @@
         "url": "https://qolmods.dev/"
       },
       {
-        "@type": "SoftwareApplication",
-        "name": "repo-spend",
-        "description": "A Claude Code mod that shows what each repo costs, live above the prompt: running total, today, last 7 days and this session's burn rate.",
-        "url": "https://qolmods.dev/",
-        "applicationCategory": "DeveloperApplication",
-        "operatingSystem": "macOS, Windows, Linux",
-        "softwareVersion": "0.5.1",
-        "image": "https://qolmods.dev/assets/repo-spend/og.png",
-        "license": "https://github.com/aseem-upadhyay/qol-mods/blob/main/LICENSE",
-        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+        "@type": "ItemList",
+        "name": "Mods for Claude Code",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "coach", "url": "https://qolmods.dev/coach/" },
+          { "@type": "ListItem", "position": 2, "name": "repo-spend", "url": "https://qolmods.dev/repo-spend/" }
+        ]
       }
     ]
   }
@@ -51,13 +47,12 @@
 <body>
   <header class="nav">
     <div class="wrap nav-inner">
-      <a class="brand" href="#top"><span class="brand-mark" aria-hidden="true">◆</span> repo-spend</a>
+      <a class="brand" href="#top"><span class="brand-mark" aria-hidden="true">◆</span> Quality of Life Mods</a>
       <nav aria-label="Sections">
-        <a href="#benefits">Why</a>
-        <a href="#bar">The bar</a>
+        <a href="#mods">Mods</a>
         <a href="#install">Install</a>
-        <a href="https://github.com/aseem-upadhyay/qol-mods/releases?q=repo-spend&amp;expanded=true">Changelog</a>
-        <a class="nav-gh" href="https://github.com/aseem-upadhyay/qol-mods/tree/main/plugins/repo-spend">GitHub</a>
+        <a href="https://github.com/aseem-upadhyay/qol-mods/releases">Changelog</a>
+        <a class="nav-gh" href="https://github.com/aseem-upadhyay/qol-mods">GitHub</a>
       </nav>
     </div>
   </header>
@@ -66,155 +61,86 @@
     <!-- Hero -->
     <section class="hero">
       <div class="wrap">
-        <a class="release" href="https://github.com/aseem-upadhyay/qol-mods/releases/tag/repo-spend-v0.5.1"><span class="release-tag">v0.5.1</span> Spend now goes to the repo where the work was <span aria-hidden="true">→</span></a>
-        <p class="eyebrow">A mod for Claude Code</p>
-        <h1>Know what every repo<br><span class="accent">costs you in Claude Code.</span></h1>
-        <p class="lede">repo-spend puts a live bar above the prompt: the repo's running total, today, the last 7 days, and this session's spend and burn rate. No dashboards to open, no exports to run.</p>
+        <a class="release" href="coach/"><span class="release-tag">New</span> coach: one habit a week, from your own sessions <span aria-hidden="true">→</span></a>
+        <p class="eyebrow">Mods for Claude Code</p>
+        <h1>Mods that make<br><span class="accent">Claude Code even better.</span></h1>
+        <p class="lede">Each one adds something Claude Code doesn't show you on its own: what a repo really costs, which habit to work on next. They install with one command and run on your machine.</p>
         <div class="hero-cta">
-          <a class="btn btn-primary" href="#install">Install in one command</a>
-          <a class="btn btn-ghost" href="https://github.com/aseem-upadhyay/qol-mods/tree/main/plugins/repo-spend">View on GitHub</a>
+          <a class="btn btn-primary" href="#mods">See the mods</a>
+          <a class="btn btn-ghost" href="https://github.com/aseem-upadhyay/qol-mods">View on GitHub</a>
         </div>
         <ul class="trust" aria-label="At a glance">
-          <li><span aria-hidden="true">🔒</span> Runs locally, sends nothing</li>
-          <li><span aria-hidden="true">💳</span> API keys, Pro and Max</li>
+          <li><span aria-hidden="true">🆓</span> Free and open source</li>
+          <li><span aria-hidden="true">🔒</span> Runs locally</li>
           <li><span aria-hidden="true">🖥️</span> Terminal and desktop app</li>
         </ul>
-
-        <figure class="shot shot-hero" data-tabs>
-          <div class="tabs" role="tablist" aria-label="Preview">
-            <button role="tab" aria-selected="true" aria-controls="rs-desktop" id="rs-desktop-tab">Desktop app</button>
-            <button role="tab" aria-selected="false" aria-controls="rs-cli" id="rs-cli-tab" tabindex="-1">Terminal</button>
-          </div>
-          <div class="shot-frame">
-            <img role="tabpanel" id="rs-desktop" aria-labelledby="rs-desktop-tab" src="assets/repo-spend/preview-desktop.svg" width="920" height="392" alt="The Claude desktop app. Above the message box, a rounded bar reads: my-app, about $1,284.50 in the last 3 months, $12.30 today, $96.75 in the last 7 days; on the right, $4.12 this session, a small green bar chart, and $6.04 an hour.">
-            <img role="tabpanel" id="rs-cli" aria-labelledby="rs-cli-tab" src="assets/repo-spend/preview-cli.svg" width="953" height="318" hidden alt="A Claude Code terminal. Above the prompt, a one-line bar reads: my-app, about $1,284.50 in the last 3 months, $12.30 today, $96.75 in the last 7 days; on the right, $4.12 this session, a green sparkline, and $6.04 an hour.">
-          </div>
-          <figcaption>Figures are illustrative.</figcaption>
-        </figure>
       </div>
     </section>
 
-    <!-- Benefits -->
-    <section class="together" id="benefits" aria-labelledby="benefits-title">
+    <!-- The mods -->
+    <section class="together" id="mods" aria-labelledby="mods-title">
       <div class="wrap">
-        <h2 id="benefits-title">Why you'll want it</h2>
-        <p class="section-lede">Claude Code's <code>/cost</code> tells you about one session. repo-spend tells you about the whole repo, and keeps telling you.</p>
-        <div class="cards">
-          <article class="card">
-            <span class="card-icon" aria-hidden="true">💰</span>
-            <h3>Know where your money goes</h3>
-            <p>A running total for each repo, worktrees included, plus today and the last 7 days. You can see which project is actually expensive.</p>
-          </article>
-          <article class="card">
-            <span class="card-icon" aria-hidden="true">💳</span>
-            <h3>See the value of your plan</h3>
-            <p>On Pro or Max it shows what your usage would have cost at API prices, so you can tell whether the subscription pays for itself. On an API key, it's the credits you've spent.</p>
-          </article>
-          <article class="card">
-            <span class="card-icon" aria-hidden="true">📈</span>
-            <h3>Catch a runaway session early</h3>
-            <p>A sparkline of the last 30 minutes turns amber, then red, as the pace climbs. You notice the $40-an-hour session while it's happening, not on the invoice.</p>
-          </article>
-          <article class="card">
-            <span class="card-icon" aria-hidden="true">⏱️</span>
-            <h3>History that doesn't vanish</h3>
-            <p>Claude Code deletes logs after 30 days by default. repo-spend keeps weekly totals that never roll off, so the number grows instead of resetting every month. It survives <code>/clear</code> too.</p>
-          </article>
-          <article class="card">
-            <span class="card-icon" aria-hidden="true">🔒</span>
-            <h3>Your logs stay on your machine</h3>
-            <p>It reads the session logs Claude Code already keeps and makes no network calls. What it stores is cost figures and token counts, never your conversations.</p>
-          </article>
-          <article class="card">
-            <span class="card-icon" aria-hidden="true">⚡</span>
-            <h3>Costs you nothing to run</h3>
-            <p>Only changed logs are re-read, so rescanning a busy repo takes about 0.1 s. It fits any width and stacks neatly with other mods' bars.</p>
-          </article>
+        <h2 id="mods-title">The mods</h2>
+        <p class="section-lede">Pick the ones you want. Each is its own plugin, so they work alone or side by side.</p>
+        <div class="mod-cards">
+          <a class="mod-card" href="coach/">
+            <div class="mod-card-shot">
+              <img src="assets/coach/preview-desktop.svg" width="780" height="1010" loading="lazy" alt="The coach report in the Claude desktop app: last week's sessions, prompts and spend, and the habit of the week.">
+            </div>
+            <div class="mod-card-body">
+              <div class="mod-card-head">
+                <span class="mod-card-name">coach</span>
+                <span class="badge">New</span>
+                <span class="badge badge-quiet">v0.2.1</span>
+              </div>
+              <h3>Get better at Claude Code, one habit a week.</h3>
+              <p>A weekly report built from your own sessions: the one habit that would help most, tips at your level, and CLAUDE.md lines and skills worth making.</p>
+              <span class="mod-card-more">Meet coach <span aria-hidden="true">→</span></span>
+            </div>
+          </a>
+          <a class="mod-card" href="repo-spend/">
+            <div class="mod-card-shot">
+              <img class="fit-whole" src="assets/repo-spend/preview-desktop.svg" width="920" height="392" loading="lazy" alt="A bar above the Claude prompt: my-app, $1,284.50 in the last 3 months, $12.30 today, and $6.04 an hour this session.">
+            </div>
+            <div class="mod-card-body">
+              <div class="mod-card-head">
+                <span class="mod-card-name">repo-spend</span>
+                <span class="badge badge-quiet">v0.5.1</span>
+              </div>
+              <h3>Know what every repo costs you.</h3>
+              <p>A live bar above the prompt: the repo's running total, today, the last 7 days, and this session's spend and burn rate.</p>
+              <span class="mod-card-more">Meet repo-spend <span aria-hidden="true">→</span></span>
+            </div>
+          </a>
         </div>
-      </div>
-    </section>
-
-    <!-- Reading the bar -->
-    <section class="mod mod-alt" id="bar" aria-labelledby="bar-title">
-      <div class="wrap">
-        <h2 id="bar-title" class="center">Everything on one line</h2>
-        <p class="section-lede">Every part of the bar answers one question. At narrower widths it drops the least important parts instead of cutting the line off.</p>
-        <dl class="parts">
-          <div><dt><span class="chip">◆ my-app</span></dt><dd>The repo this session runs in. Worktree sessions count toward the main checkout.</dd></div>
-          <div><dt><span class="chip">$1,284.50 last 3 months</span></dt><dd>Every session in the repo, labelled with how far back it really reaches. <strong>≈</strong> means part of it is estimated from token counts.</dd></div>
-          <div><dt><span class="chip">$12.30 today · $96.75 last 7d</span></dt><dd>The same total for today and for the past week.</dd></div>
-          <div><dt><span class="chip">$4.12 this session</span></dt><dd>The live session's cost, the same figure <code>/cost</code> shows, subagents included.</dd></div>
-          <div><dt><span class="chip"><span class="spark" aria-hidden="true">▁▂▃▅▃▆</span> sparkline</span></dt><dd>This session's spend in 3-minute slices over the last 30 minutes.</dd></div>
-          <div><dt><span class="chip">$6.04/hr</span></dt><dd>The pace over those 30 minutes: grey when idle, green under $15/hr, amber under $40/hr, red above.</dd></div>
-        </dl>
+        <p class="more-soon">More on the way. <a href="https://github.com/aseem-upadhyay/qol-mods">Watch the repo</a> to hear when the next one lands.</p>
       </div>
     </section>
 
     <!-- Install -->
     <section class="install" id="install" aria-labelledby="install-title">
       <div class="wrap install-inner">
-        <h2 id="install-title">Install in under a minute</h2>
+        <h2 id="install-title">Every mod installs the same way</h2>
         <ol class="steps">
           <li>
-            <p>In a Claude Code terminal session, type this at the prompt:</p>
+            <p>In a Claude Code terminal session, type this at the prompt, with the mod's name in place of <code>&lt;mod&gt;</code>:</p>
             <div class="install-inline install-big">
-              <code>/plugin install repo-spend --marketplace aseem-upadhyay/qol-mods</code>
-              <button class="copy" type="button" data-copy="/plugin install repo-spend --marketplace aseem-upadhyay/qol-mods">Copy</button>
+              <code>/plugin install <span class="var">&lt;mod&gt;</span> --marketplace aseem-upadhyay/qol-mods</code>
             </div>
           </li>
-          <li><p>Answer <kbd>y</kbd> to add the marketplace, then pick the <strong>user</strong> scope so the bar shows up in every session.</p></li>
-          <li><p>That's it. It also loads in the desktop app's Code tab. Type <code>/repo-spend</code> any time to hide or show it.</p></li>
+          <li><p>Answer <kbd>y</kbd> to add the marketplace (only the first time), then pick the <strong>user</strong> scope so the mod loads in every session.</p></li>
+          <li><p>That's it. Installing from a terminal also loads the mod in the desktop app's Code tab. Each mod's page has its exact command.</p></li>
         </ol>
-        <p class="reqs">Needs macOS or Linux and <code>python3</code> 3.9 or newer. Windows isn't supported yet.</p>
+        <p class="reqs">The mods need macOS or Linux and <code>python3</code> 3.9 or newer. Windows isn't supported yet.</p>
       </div>
     </section>
   </main>
 
   <footer class="footer">
     <div class="wrap footer-inner">
-      <p>repo-spend is part of <a href="https://github.com/aseem-upadhyay/qol-mods">qol-mods</a> by <a href="https://github.com/aseem-upadhyay">Aseem Upadhyay</a> · <a href="https://github.com/aseem-upadhyay/qol-mods/blob/main/LICENSE">MIT license</a> · <a href="https://github.com/aseem-upadhyay/qol-mods/releases?q=repo-spend&amp;expanded=true">Changelog</a></p>
+      <p><a href="https://github.com/aseem-upadhyay/qol-mods">qol-mods</a> by <a href="https://github.com/aseem-upadhyay">Aseem Upadhyay</a> · <a href="https://github.com/aseem-upadhyay/qol-mods/blob/main/LICENSE">MIT license</a> · <a href="https://github.com/aseem-upadhyay/qol-mods/releases">Changelog</a></p>
       <p class="muted">Not affiliated with Anthropic. Claude and Claude Code are trademarks of Anthropic.</p>
     </div>
   </footer>
-
-  <script>
-    // Tabs: switch between preview images.
-    document.querySelectorAll('[data-tabs]').forEach(function (fig) {
-      var tabs = Array.prototype.slice.call(fig.querySelectorAll('[role="tab"]'));
-      function select(tab) {
-        tabs.forEach(function (t) {
-          var on = t === tab;
-          t.setAttribute('aria-selected', on);
-          t.tabIndex = on ? 0 : -1;
-          document.getElementById(t.getAttribute('aria-controls')).hidden = !on;
-        });
-      }
-      tabs.forEach(function (tab, i) {
-        tab.addEventListener('click', function () { select(tab); });
-        tab.addEventListener('keydown', function (e) {
-          var d = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
-          if (!d) return;
-          var next = tabs[(i + d + tabs.length) % tabs.length];
-          select(next);
-          next.focus();
-        });
-      });
-    });
-
-    // Copy buttons.
-    document.querySelectorAll('.copy').forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        var text = btn.getAttribute('data-copy');
-        var done = function () {
-          btn.textContent = 'Copied';
-          btn.classList.add('copied');
-          setTimeout(function () { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 1600);
-        };
-        if (navigator.clipboard) {
-          navigator.clipboard.writeText(text).then(done, function () {});
-        }
-      });
-    });
-  </script>
 </body>
 </html>
