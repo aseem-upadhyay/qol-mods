@@ -10,8 +10,20 @@ Your work day by day, across every repo, grouped by PR and branch, with the time
 [![macOS | Linux](https://img.shields.io/badge/platform-macOS%20%7C%20Linux-555?style=flat-square)](#requirements)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-3776AB?style=flat-square&logo=python&logoColor=white)](#requirements)
 [![License: MIT](https://img.shields.io/badge/license-MIT-2ea44f?style=flat-square)](../../LICENSE)
+[![Website](https://img.shields.io/badge/website-qolmods.dev%2Fworklog-D97757?style=flat-square)](https://qolmods.dev/worklog/)
+
+<img src="assets/preview-desktop.svg" alt="The worklog pane in the Claude desktop app, on Thursday 22 October 2026: 6h 19m across 3 repos, 5 branches, 2 PRs and 1 review, the day split by repo in one bar. Under it each branch has a timeline of its stretches from 09:00 to 18:00: my-app's #42 checkout-redesign, Redesign the checkout page, 2h 58m, PR open, opened to show what was asked, its three commits and the folders it changed; main, 1h 15m; api's #118 rate-limit, merged, 1h 32m; and docs, 28m, committed by hand." width="100%">
+<p><sub><code>/worklog</code> in the Claude desktop app</sub></p>
+
+<img src="assets/preview-cli.svg" alt="A Claude Code terminal after /standup: Standup for Thu 22 Oct. Thursday, 6h 19m across 3 repos, split in a colored bar: my-app 4h 19m, with #42 checkout-redesign, Redesign the checkout page, 2h 58m, PR open, 3 commits, 14 files, 18 test runs, and main, Fix the flaky cart test, 1h 15m; api 1h 32m, #118 rate-limit merged; docs 28m. Then the PR reviewed, today so far, 3h 25m, and the open PRs." width="100%">
+<p><sub><code>/standup</code> in the terminal</sub></p>
+
+<img src="assets/preview-week.svg" alt="A Claude Code terminal after /standup week: the week of Mon 19 Oct as a timesheet, 28h 15m. A row per repo and branch, a column per day, rounded to 15 minutes: my-app #42 checkout-redesign 18:15 over five days, api #118 rate-limit 6:15, docs main 1:15; each day's total underneath, 6:15 on Monday." width="100%">
+<p><sub><code>/standup week</code>: the week as a timesheet</sub></p>
 
 </div>
+
+As text, which is what `/standup copy` puts on your clipboard:
 
 ```
 Standup since Fri 9 Oct

@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>worklog · Your standup and timesheet from Claude Code</title>
+  <meta name="description" content="worklog is a free, open-source Claude Code mod: /standup says what you did yesterday across every repo, by PR and branch, with the time spent.">
+  <meta name="keywords" content="Claude Code, standup, worklog, timesheet, time tracking, git, pull requests, Claude Code plugin">
+  <meta name="author" content="Aseem Upadhyay">
+  <meta name="robots" content="index, follow, max-image-preview:large">
+  <meta property="og:title" content="worklog · What did I do yesterday? Ready for standup">
+  <meta property="og:site_name" content="Quality of Life Mods">
+  <meta property="og:description" content="Your work day by day, across every repo, grouped by PR and branch, with the time spent. /standup for the meeting, /worklog for any day or a week's timesheet. Free, open source, and local first.">
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="en_US">
+  <meta property="og:url" content="https://qolmods.dev/worklog/">
+  <meta property="og:image" content="https://qolmods.dev/assets/worklog/og.png">
+  <meta property="og:image:type" content="image/png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="627">
+  <meta property="og:image:alt" content="worklog: What did I do yesterday? Ready for standup. Thursday 22 October, 6h 19m across my-app, api and docs, each branch on a timeline of the day.">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="worklog · What did I do yesterday? Ready for standup">
+  <meta name="twitter:description" content="Your work day by day, across every repo, grouped by PR and branch, with the time spent. /standup for the meeting, /worklog for any day or a week's timesheet. Free, open source, and local first.">
+  <meta name="twitter:image" content="https://qolmods.dev/assets/worklog/og.png">
+  <meta name="twitter:image:alt" content="worklog: What did I do yesterday? Ready for standup. Thursday 22 October, 6h 19m across my-app, api and docs, each branch on a timeline of the day.">
+  <link rel="canonical" href="https://qolmods.dev/worklog/">
+  <meta name="theme-color" content="#D97757">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="stylesheet" href="../style.css">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebSite",
+        "name": "Quality of Life Mods",
+        "alternateName": "qol-mods",
+        "url": "https://qolmods.dev/",
+        "@id": "https://qolmods.dev/#website",
+        "description": "Free, open-source mods that make Claude Code even better.",
+        "inLanguage": "en",
+        "publisher": {
+          "@type": "Person",
+          "name": "Aseem Upadhyay",
+          "url": "https://github.com/aseem-upadhyay"
+        }
+      },
+      {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Quality of Life Mods",
+            "item": "https://qolmods.dev/"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "worklog",
+            "item": "https://qolmods.dev/worklog/"
+          }
+        ]
+      },
+      {
+        "@type": "SoftwareApplication",
+        "name": "worklog",
+        "alternateName": "standup",
+        "description": "A Claude Code mod that shows what you worked on, day by day, across every repo, grouped by PR and branch with the time spent: /standup for the last work day, /worklog for any day or a week's timesheet.",
+        "url": "https://qolmods.dev/worklog/",
+        "applicationCategory": "DeveloperApplication",
+        "operatingSystem": "macOS, Linux",
+        "softwareVersion": "0.3.1",
+        "image": "https://qolmods.dev/assets/worklog/og.png",
+        "license": "https://github.com/aseem-upadhyay/qol-mods/blob/main/LICENSE",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        },
+        "applicationSubCategory": "Claude Code plugin",
+        "author": {
+          "@type": "Person",
+          "name": "Aseem Upadhyay",
+          "url": "https://github.com/aseem-upadhyay"
+        },
+        "isAccessibleForFree": true,
+        "isPartOf": {
+          "@id": "https://qolmods.dev/#website"
+        },
+        "installUrl": "https://qolmods.dev/worklog/#install",
+        "codeRepository": "https://github.com/aseem-upadhyay/qol-mods/tree/main/plugins/worklog",
+        "screenshot": [
+          "https://qolmods.dev/assets/worklog/preview-desktop.svg",
+          "https://qolmods.dev/assets/worklog/preview-cli.svg",
+          "https://qolmods.dev/assets/worklog/preview-week.svg"
+        ],
+        "featureList": [
+          "/standup: what you did since your last work day, across every repo",
+          "/worklog: any day in a pane, with a timeline of when you worked",
+          "A week's timesheet, rounded to 15 minutes, to copy or save as CSV",
+          "Commits and branch switches made by hand count too",
+          "PR titles and states from GitHub through your gh login, read only"
+        ],
+        "softwareRequirements": "Claude Code, python3 3.9 or newer; optional: gh, signed in"
+      }
+    ]
+  }
+  </script>
+</head>
+<body>
+  <header class="nav">
+    <div class="wrap nav-inner">
+      <div class="crumbs">
+        <a class="brand" href="../"><span class="brand-mark" aria-hidden="true">◆</span> qol-mods</a>
+        <span class="crumb-sep" aria-hidden="true">/</span>
+        <a class="crumb-here brand" href="#top" aria-current="page">worklog</a>
+      </div>
+      <nav aria-label="Sections">
+        <a href="#benefits">Why</a>
+        <a href="#using">Using it</a>
+        <a href="#install">Install</a>
+        <a href="https://github.com/aseem-upadhyay/qol-mods/releases?q=worklog&amp;expanded=true">Changelog</a>
+        <a class="nav-gh" href="https://github.com/aseem-upadhyay/qol-mods/tree/main/plugins/worklog">GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="top">
+    <!-- Hero -->
+    <section class="hero">
+      <div class="wrap">
+        <a class="release" href="https://github.com/aseem-upadhyay/qol-mods/releases/tag/worklog-v0.3.1"><span class="release-tag">v0.3.1</span> worklog is out: /standup and /worklog <span aria-hidden="true">→</span></a>
+        <p class="eyebrow">A mod for Claude Code</p>
+        <h1>What did I do yesterday?<br><span class="accent">Ready for standup.</span></h1>
+        <p class="lede">worklog reads the sessions you've already had and your repos' git, and lays out your work day by day: every repo, grouped by PR and branch, with the time spent. Type <code>/standup</code> before the meeting; type <code>/worklog week</code> when the timesheet is due.</p>
+        <div class="hero-cta">
+          <a class="btn btn-primary" href="#install">Install in one command</a>
+          <a class="btn btn-ghost" href="https://github.com/aseem-upadhyay/qol-mods/tree/main/plugins/worklog">View on GitHub</a>
+        </div>
+        <ul class="trust" aria-label="At a glance">
+          <li><span aria-hidden="true">🔒</span> Shows, never sends</li>
+          <li><span aria-hidden="true">🗂️</span> Every repo at once</li>
+          <li><span aria-hidden="true">🖥️</span> Terminal and desktop app</li>
+        </ul>
+
+        <figure class="shot shot-hero shot-tall" data-tabs>
+          <div class="tabs" role="tablist" aria-label="Preview">
+            <button role="tab" aria-selected="true" aria-controls="wl-desktop" id="wl-desktop-tab">/worklog in the desktop app</button>
+            <button role="tab" aria-selected="false" aria-controls="wl-cli" id="wl-cli-tab" tabindex="-1">/standup in the terminal</button>
+          </div>
+          <div class="shot-frame">
+            <img role="tabpanel" id="wl-desktop" aria-labelledby="wl-desktop-tab" src="../assets/worklog/preview-desktop.svg" width="780" height="1109" alt="The worklog pane in the Claude desktop app, on Thursday 22 October 2026: 6h 19m across 3 repos, 5 branches, 2 PRs and 1 review, the day split by repo in one bar. Under it each branch has a timeline of its stretches from 09:00 to 18:00: my-app's #42 checkout-redesign, Redesign the checkout page, 2h 58m, PR open, opened to show what was asked, its three commits and the folders it changed; main, 1h 15m; api's #118 rate-limit, merged, 1h 32m; and docs, 28m, committed by hand.">
+            <img role="tabpanel" id="wl-cli" aria-labelledby="wl-cli-tab" src="../assets/worklog/preview-cli.svg" width="706" height="1198" hidden alt="A Claude Code terminal after /standup: Standup for Thu 22 Oct. Thursday, 6h 19m across 3 repos, split in a colored bar: my-app 4h 19m, with #42 checkout-redesign, Redesign the checkout page, 2h 58m, PR open, 3 commits, 14 files, 18 test runs, and main, Fix the flaky cart test, 1h 15m; api 1h 32m, #118 rate-limit merged; docs 28m. Then the PR reviewed, today so far, 3h 25m, and the open PRs.">
+          </div>
+          <figcaption>Figures are illustrative.</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <!-- Benefits -->
+    <section class="together" id="benefits" aria-labelledby="benefits-title">
+      <div class="wrap">
+        <h2 id="benefits-title">Why you'll want it</h2>
+        <p class="section-lede">You did the work in Claude Code, so Claude Code already knows what it was. worklog turns its logs into the answer for standup and the hours for your timesheet.</p>
+        <div class="cards">
+          <article class="card">
+            <span class="card-icon" aria-hidden="true">🗂️</span>
+            <h3>Every repo, by PR then branch</h3>
+            <p>Sessions in any repo on your machine, worktrees counted toward their main checkout. Each PR or branch gets a one-line headline (the PR's title, else the session's name) and a line of counts: commits, files, test runs.</p>
+          </article>
+          <article class="card">
+            <span class="card-icon" aria-hidden="true">⏱️</span>
+            <h3>Time that adds up</h3>
+            <p>A minute two sessions share goes mostly to the one you were typing in, so a day's branches add up to the time you were actually at it. Claude working alone past 30 minutes is shown apart, not added to your day.</p>
+          </article>
+          <article class="card">
+            <span class="card-icon" aria-hidden="true">🌿</span>
+            <h3>Git and GitHub too</h3>
+            <p>Commits and branch switches you make by hand, outside Claude, count as your work. With <code>gh</code> signed in, PRs get GitHub's titles and states, and a standup ends with the PRs you reviewed and the ones still open.</p>
+          </article>
+          <article class="card">
+            <span class="card-icon" aria-hidden="true">🗓️</span>
+            <h3>A week's timesheet</h3>
+            <p>A row per branch, a column per day, rounded to 15 minutes with each day still adding up. Copy it as a table or CSV, or save the CSV.</p>
+          </article>
+          <article class="card">
+            <span class="card-icon" aria-hidden="true">🎨</span>
+            <h3>At home on both</h3>
+            <p>In the desktop app the day is split by repo in one bar and each branch gets a timeline of its stretches. In the terminal the same is drawn in your theme's colors with block characters.</p>
+          </article>
+          <article class="card">
+            <span class="card-icon" aria-hidden="true">🔒</span>
+            <h3>Shows, never sends</h3>
+            <p>It reads the logs Claude Code already keeps and your repos' git, and shows you what it finds when you ask. Nothing is posted anywhere, and nothing is summarised by a model. Finished days are archived, so last month still adds up.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- Using it -->
+    <section class="mod mod-alt" id="using" aria-labelledby="using-title">
+      <div class="wrap">
+        <h2 id="using-title" class="center">Two commands: one for the meeting, one for the record</h2>
+        <p class="section-lede">On Monday, <code>/standup</code> covers Friday and anything you did at the weekend. When the week's hours are due, it's a timesheet.</p>
+        <figure class="shot shot-hero shot-tall">
+          <div class="shot-frame">
+            <img src="../assets/worklog/preview-week.svg" width="706" height="558" loading="lazy" alt="A Claude Code terminal after /standup week: the week of Mon 19 Oct as a timesheet, 28h 15m. A row per repo and branch, a column per day, rounded to 15 minutes: my-app #42 checkout-redesign 18:15 over five days, api #118 rate-limit 6:15, docs main 1:15; each day's total underneath, 6:15 on Monday.">
+          </div>
+        </figure>
+        <dl class="parts" id="standup">
+          <div><dt><span class="chip">/standup</span></dt><dd>Since your last work day, and today so far: each repo, its PRs and branches, what they were and how long they took.</dd></div>
+          <div><dt><span class="chip">/standup full</span></dt><dd>With what you asked, the commits and the folders changed under each branch.</dd></div>
+          <div><dt><span class="chip">/standup week · /standup last week</span></dt><dd>The week as a timesheet, a row per branch and a column per day.</dd></div>
+          <div><dt><span class="chip">/standup copy</span></dt><dd>Any of the above, put on your clipboard as well, ready to paste into Slack.</dd></div>
+          <div><dt><span class="chip">/worklog · /worklog yesterday</span></dt><dd>Any day in a pane, with a timeline of when you worked. Press a branch for its details; <kbd>p</kbd> and <kbd>n</kbd> move a day.</dd></div>
+          <div><dt><span class="chip">/worklog week</span></dt><dd>The week's timesheet in the pane: <kbd>c</kbd> copies it as a table, <kbd>v</kbd> as CSV, <kbd>s</kbd> saves the CSV.</dd></div>
+        </dl>
+      </div>
+    </section>
+
+    <!-- Install -->
+    <section class="install" id="install" aria-labelledby="install-title">
+      <div class="wrap install-inner">
+        <h2 id="install-title">Install in under a minute</h2>
+        <ol class="steps">
+          <li>
+            <p>In a Claude Code terminal session, type this at the prompt:</p>
+            <div class="install-inline install-big">
+              <code>/plugin install worklog --marketplace aseem-upadhyay/qol-mods</code>
+              <button class="copy" type="button" data-copy="/plugin install worklog --marketplace aseem-upadhyay/qol-mods">Copy</button>
+            </div>
+          </li>
+          <li><p>Answer <kbd>y</kbd> to add the marketplace, then pick the <strong>user</strong> scope so worklog loads in every session.</p></li>
+          <li><p>That's it. It reads the logs you already have, so <code>/standup</code> works straight away, back as far as Claude Code has kept them.</p></li>
+        </ol>
+        <p class="reqs">Needs macOS or Linux and <code>python3</code> 3.9 or newer. <a href="https://cli.github.com"><code>gh</code></a>, signed in, adds PR titles, states, reviews and open PRs. Windows isn't supported yet.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="wrap footer-inner">
+      <p>worklog is part of <a href="../">Quality of Life Mods</a> by <a href="https://github.com/aseem-upadhyay">Aseem Upadhyay</a> · <a href="https://github.com/aseem-upadhyay/qol-mods/blob/main/LICENSE">MIT license</a> · <a href="https://github.com/aseem-upadhyay/qol-mods/releases?q=worklog&amp;expanded=true">Changelog</a></p>
+      <p class="muted">Not affiliated with Anthropic. Claude and Claude Code are trademarks of Anthropic.</p>
+    </div>
+  </footer>
+
+  <script src="../site.js"></script>
+</body>
+</html>
