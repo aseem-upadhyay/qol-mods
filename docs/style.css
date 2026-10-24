@@ -714,6 +714,51 @@ kbd {
   font-size: 15px;
 }
 
+/* FAQ */
+.faq {
+  padding: 96px 0;
+  border-top: 1px solid var(--border);
+}
+
+.faq-inner {
+  max-width: 760px;
+}
+
+.faq h2 {
+  font-size: clamp(28px, 4vw, 40px);
+  font-weight: 800;
+  text-align: center;
+}
+
+.faq-list {
+  margin: 40px 0 0;
+  display: grid;
+  gap: 12px;
+}
+
+.faq details {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 22px;
+}
+
+.faq summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.faq details p {
+  margin: 12px 0 0;
+  color: var(--muted);
+}
+
+/* Long commands wrap inside an answer */
+.faq details code {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
 /* Footer */
 .footer {
   padding: 40px 0;
@@ -775,7 +820,8 @@ kbd {
 
   .mod,
   .together,
-  .install {
+  .install,
+  .faq {
     padding: 64px 0;
   }
 
