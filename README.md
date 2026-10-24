@@ -17,10 +17,25 @@ Each one adds something the built-in experience doesn't give you.
 
 | Mod | What it does | |
 | --- | --- | --- |
-| **[coach](plugins/coach)** <sup>new</sup> | A weekly coach built from your own sessions: one habit at a time, tips at your level, CLAUDE.md lines and skills worth making | [Website](https://qolmods.dev/coach/) |
+| **[worklog](plugins/worklog)** <sup>new</sup> | What you did, day by day, across every repo, by PR and branch with the time spent: `/standup` for the meeting, `/worklog` for any day or a week's timesheet | [Website](https://qolmods.dev/worklog/) |
+| **[coach](plugins/coach)** | A weekly coach built from your own sessions: one habit at a time, tips at your level, CLAUDE.md lines and skills worth making | [Website](https://qolmods.dev/coach/) |
 | **[repo-spend](plugins/repo-spend)** | A live bar above the prompt with what the repo has cost you: running total, today, the last 7 days, and this session's burn rate | [Website](https://qolmods.dev/repo-spend/) |
 
 More are on the way. Each mod's README has the full details.
+
+### [worklog](plugins/worklog)
+
+What did I do yesterday? worklog reads the sessions you've already had and your repos' git, and lays out your work day by day: every repo, grouped by PR and branch, with the time spent, what each was, and its commits, files and test runs. `/standup` covers the last work day (Monday covers Friday and the weekend), `/worklog` shows any day with a timeline of when you worked, and `/worklog week` makes the week's timesheet, rounded to 15 minutes, to copy or save as CSV.
+
+<img src="plugins/worklog/assets/preview-desktop.svg" alt="The worklog pane in the Claude desktop app, on Thursday 22 October 2026: 6h 19m across 3 repos, 5 branches, 2 PRs and 1 review, the day split by repo in one bar. Under it each branch has a timeline of its stretches from 09:00 to 18:00: my-app's #42 checkout-redesign, Redesign the checkout page, 2h 58m, PR open, opened to show what was asked, its three commits and the folders it changed; main, 1h 15m; api's #118 rate-limit, merged, 1h 32m; and docs, 28m, committed by hand." width="100%">
+<p><sub><code>/worklog</code> in the Claude desktop app</sub></p>
+
+<img src="plugins/worklog/assets/preview-cli.svg" alt="A Claude Code terminal after /standup: Standup for Thu 22 Oct. Thursday, 6h 19m across 3 repos, split in a colored bar: my-app 4h 19m, with #42 checkout-redesign, Redesign the checkout page, 2h 58m, PR open, 3 commits, 14 files, 18 test runs, and main, Fix the flaky cart test, 1h 15m; api 1h 32m, #118 rate-limit merged; docs 28m. Then the PR reviewed, today so far, 3h 25m, and the open PRs." width="100%">
+<p><sub><code>/standup</code> in the terminal</sub></p>
+
+```
+/plugin install worklog --marketplace aseem-upadhyay/qol-mods
+```
 
 ### [coach](plugins/coach)
 
