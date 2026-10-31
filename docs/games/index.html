@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>games · A quick game while Claude works · Claude Code mod</title>
+  <meta name="description" content="games is a free, open-source Claude Code mod: /games opens Tetris, Snake, Wordle, 2048 and nine more in a side pane while Claude works, with milestones and saved progress.">
+  <meta name="keywords" content="Claude Code, games, Tetris, Snake, Wordle, 2048, Minesweeper, Breakout, Dino Run, Pong, Claude Code plugin, terminal games">
+  <meta name="author" content="Aseem Upadhyay">
+  <meta name="robots" content="index, follow, max-image-preview:large">
+  <meta property="og:title" content="games · Claude's working. Play a quick game">
+  <meta property="og:site_name" content="Quality of Life Mods">
+  <meta property="og:description" content="Thirteen games you already know in a side pane of Claude Code: Tetris, Snake, Wordle, 2048, Minesweeper and more, with 83 milestones and your progress saved. They pause when Claude's done. Free, open source, and all local.">
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="en_US">
+  <meta property="og:url" content="https://qolmods.dev/games/">
+  <meta property="og:image" content="https://qolmods.dev/assets/games/og.png">
+  <meta property="og:image:type" content="image/png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="627">
+  <meta property="og:image:alt" content="games: Claude's working. Play a quick game. Four boards as the pane draws them: Tetris with a T piece falling, 2048 with a 2048 tile made, a Wordle half solved, and Snake chasing its food.">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="games · Claude's working. Play a quick game">
+  <meta name="twitter:description" content="Thirteen games you already know in a side pane of Claude Code: Tetris, Snake, Wordle, 2048, Minesweeper and more, with 83 milestones and your progress saved. They pause when Claude's done. Free, open source, and all local.">
+  <meta name="twitter:image" content="https://qolmods.dev/assets/games/og.png">
+  <meta name="twitter:image:alt" content="games: Claude's working. Play a quick game. Four boards as the pane draws them: Tetris with a T piece falling, 2048 with a 2048 tile made, a Wordle half solved, and Snake chasing its food.">
+  <link rel="canonical" href="https://qolmods.dev/games/">
+  <meta name="theme-color" content="#D97757">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="stylesheet" href="../style.css">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebSite",
+        "name": "Quality of Life Mods",
+        "alternateName": "qol-mods",
+        "url": "https://qolmods.dev/",
+        "@id": "https://qolmods.dev/#website",
+        "description": "Free, open-source mods that make Claude Code even better.",
+        "inLanguage": "en",
+        "publisher": {
+          "@type": "Person",
+          "name": "Aseem Upadhyay",
+          "url": "https://github.com/aseem-upadhyay"
+        }
+      },
+      {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Quality of Life Mods",
+            "item": "https://qolmods.dev/"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "games",
+            "item": "https://qolmods.dev/games/"
+          }
+        ]
+      },
+      {
+        "@type": "SoftwareApplication",
+        "name": "games",
+        "description": "A Claude Code mod with thirteen small games in a side pane: Snake, Tetris, Breakout, Dino Run, Pong, 2048, Minesweeper, Lights Out, Memory, Connect Four, Tic-tac-toe, Wordle and Hangman, with milestones and your progress saved between sessions.",
+        "url": "https://qolmods.dev/games/",
+        "applicationCategory": "GameApplication",
+        "applicationSubCategory": "Claude Code plugin",
+        "operatingSystem": "macOS, Linux",
+        "softwareVersion": "0.3.0",
+        "image": "https://qolmods.dev/assets/games/og.png",
+        "license": "https://github.com/aseem-upadhyay/qol-mods/blob/main/LICENSE",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        },
+        "author": {
+          "@type": "Person",
+          "name": "Aseem Upadhyay",
+          "url": "https://github.com/aseem-upadhyay"
+        },
+        "isAccessibleForFree": true,
+        "isPartOf": {
+          "@id": "https://qolmods.dev/#website"
+        },
+        "installUrl": "https://qolmods.dev/games/#install",
+        "codeRepository": "https://github.com/aseem-upadhyay/qol-mods/tree/main/plugins/games",
+        "screenshot": [
+          "https://qolmods.dev/assets/games/preview-desktop.svg",
+          "https://qolmods.dev/assets/games/preview-cli.svg",
+          "https://qolmods.dev/assets/games/preview-games.svg"
+        ],
+        "featureList": [
+          "Thirteen games: Snake, Tetris, Breakout, Dino Run, Pong, 2048, Minesweeper, Lights Out, Memory, Connect Four, Tic-tac-toe, Wordle and Hangman",
+          "83 milestones across the games, with a toast when you get one",
+          "Bests, streaks and a half-finished game kept between sessions",
+          "A daily Wordle with a streak",
+          "Arcade games pause when you type or Claude finishes a turn",
+          "All local: no game calls a model"
+        ],
+        "softwareRequirements": "Claude Code, in the desktop app's Code tab or a terminal"
+      }
+    ]
+  }
+  </script>
+</head>
+<body>
+  <header class="nav">
+    <div class="wrap nav-inner">
+      <div class="crumbs">
+        <a class="brand" href="../"><span class="brand-mark" aria-hidden="true">◆</span> qol-mods</a>
+        <span class="crumb-sep" aria-hidden="true">/</span>
+        <a class="crumb-here brand" href="#top" aria-current="page">games</a>
+      </div>
+      <nav aria-label="Sections">
+        <a href="#benefits">Why</a>
+        <a href="#games">The games</a>
+        <a href="#install">Install</a>
+        <a href="https://github.com/aseem-upadhyay/qol-mods/releases?q=games&amp;expanded=true">Changelog</a>
+        <a class="nav-gh" href="https://github.com/aseem-upadhyay/qol-mods/tree/main/plugins/games">GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="top">
+    <!-- Hero -->
+    <section class="hero">
+      <div class="wrap">
+        <a class="release" href="https://github.com/aseem-upadhyay/qol-mods/releases/tag/games-v0.3.0"><span class="release-tag">v0.3.0</span> games is out: thirteen games in a side pane <span aria-hidden="true">→</span></a>
+        <p class="eyebrow">A mod for Claude Code</p>
+        <h1>Claude's working.<br><span class="accent">Play a quick game.</span></h1>
+        <p class="lede">Type <code>/games</code> and a pane opens beside the conversation with thirteen games you already know: Tetris, Snake, Wordle, 2048, Minesweeper and more. Milestones to chase, your bests saved, and the game pauses itself when Claude's done.</p>
+        <div class="hero-cta">
+          <a class="btn btn-primary" href="#install">Install in one command</a>
+          <a class="btn btn-ghost" href="https://github.com/aseem-upadhyay/qol-mods/tree/main/plugins/games">View on GitHub</a>
+        </div>
+        <ul class="trust" aria-label="At a glance">
+          <li><span aria-hidden="true">🎮</span> Thirteen games</li>
+          <li><span aria-hidden="true">🔒</span> All local</li>
+          <li><span aria-hidden="true">🖥️</span> Terminal and desktop app</li>
+        </ul>
+
+        <figure class="shot shot-hero" data-tabs>
+          <div class="tabs" role="tablist" aria-label="Preview">
+            <button role="tab" aria-selected="true" aria-controls="gm-desktop" id="gm-desktop-tab">In the desktop app</button>
+            <button role="tab" aria-selected="false" aria-controls="gm-cli" id="gm-cli-tab" tabindex="-1">/games in the terminal</button>
+          </div>
+          <div class="shot-frame">
+            <img role="tabpanel" id="gm-desktop" aria-labelledby="gm-desktop-tab" src="../assets/games/preview-desktop.svg" width="941" height="518" alt="The Claude desktop app. On the left Claude is at work: it read and edited the upload client and is running the tests. Docked on the right, the games pane shows a Tetris game: a T piece falling over its ghost toward a stack with a gap, the next and held pieces beside the well, level 2, 18 lines, a score of 4,804 against a best of 12,400, and the controls on one line below.">
+            <img role="tabpanel" id="gm-cli" class="shot-narrow" aria-labelledby="gm-cli-tab" src="../assets/games/preview-cli.svg" width="550" height="484" hidden alt="A Claude Code terminal after /games. Above the prompt, the pane lists all thirteen games, each with a colored glyph, its best score or streak, and its milestones so far: Snake best 61 with a game to resume, Tetris best 12,400, 2048 best 23,640, Wordle on a 6-day streak with today's puzzle waiting, and the rest. The keys to choose, play and see milestones are on the last line.">
+          </div>
+          <figcaption>Scores are illustrative. Every board is drawn by the game's own code.</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <!-- Benefits -->
+    <section class="together" id="benefits" aria-labelledby="benefits-title">
+      <div class="wrap">
+        <h2 id="benefits-title">Why you'll want it</h2>
+        <p class="section-lede">Claude is running the test suite again. You could watch the spinner, or you could clear four lines in Tetris. games is for the minute in between.</p>
+        <div class="cards">
+          <article class="card">
+            <span class="card-icon" aria-hidden="true">🎮</span>
+            <h3>Thirteen games you already know</h3>
+            <p>Nothing to learn: arrow keys or the mouse, one line of score above the board, one line of controls below it, and nothing else. <code>/games snake</code> goes straight to a game.</p>
+          </article>
+          <article class="card">
+            <span class="card-icon" aria-hidden="true">⏸️</span>
+            <h3>Out of Claude's way</h3>
+            <p>Typing in the prompt, or Claude starting or finishing a turn, pauses an arcade game, and a toast says when Claude is done. <code>/games</code> works mid-turn, so you never wait to start.</p>
+          </article>
+          <article class="card">
+            <span class="card-icon" aria-hidden="true">★</span>
+            <h3>83 milestones</h3>
+            <p>Small goals across the games, from "eat once" to "beat Connect Four on Hard three times in a row". A toast when you get one, and each shows how close you are: "12 of 25".</p>
+          </article>
+          <article class="card">
+            <span class="card-icon" aria-hidden="true">💾</span>
+            <h3>Progress that stays</h3>
+            <p>Bests, streaks, milestones and the game you left halfway are kept between sessions. Arcade games come back paused, right where you left them, and two sessions playing at once add up instead of overwriting.</p>
+          </article>
+          <article class="card">
+            <span class="card-icon" aria-hidden="true">📅</span>
+            <h3>A daily Wordle</h3>
+            <p>One puzzle a day, the same all day, with a daily streak, and practice games as many as you like. Hard mode and high contrast colors are one setting away.</p>
+          </article>
+          <article class="card">
+            <span class="card-icon" aria-hidden="true">🔒</span>
+            <h3>All local</h3>
+            <p>Nothing is sent anywhere and no game calls a model, so playing costs you no usage. Your progress lives in Claude Code's own store for the plugin.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- The games -->
+    <section class="mod mod-alt" id="games" aria-labelledby="games-title">
+      <div class="wrap">
+        <h2 id="games-title" class="center">Arcade, puzzles, a bot to beat, and words</h2>
+        <p class="section-lede">Each one fits the pane: in the desktop app beside the conversation, in the terminal in the strip above the prompt, with smaller tiles where it has to.</p>
+        <figure class="shot shot-hero">
+          <div class="shot-frame">
+            <img src="../assets/games/preview-games.svg" width="1108" height="752" loading="lazy" alt="Six of the games as the pane draws them. Tetris: a stack with a gap and a T piece above its ghost. 2048: a 2048 tile made, scoring 23,640. Wordle: today's puzzle, ARISE and CRAMP tried, A and R yellow then C, R and A green, CRA typed on the third row, the keyboard colored below. Snake: fifteen long, food ahead. Minesweeper: an easy board half open, numbers in color, two flags placed, 41 seconds in. Connect Four: red has four on a diagonal against the Normal bot, and the line under the board says You win! with r: again and h: hub.">
+          </div>
+          <figcaption>Six of the thirteen, as the pane draws them.</figcaption>
+        </figure>
+        <dl class="parts">
+          <div><dt><span class="chip">Arcade</span></dt><dd>Snake, Tetris (with hold and a ghost piece), Breakout, Dino Run, and Pong against a bot on Easy, Normal or Hard.</dd></div>
+          <div><dt><span class="chip">Puzzles</span></dt><dd>2048, Minesweeper in three sizes, Lights Out level by level, and Memory on a 4×4 or 6×4 board.</dd></div>
+          <div><dt><span class="chip">Versus</span></dt><dd>Connect Four against a bot on three levels, and Tic-tac-toe on Easy or Perfect, with who starts swapping every game.</dd></div>
+          <div><dt><span class="chip">Words</span></dt><dd>Wordle, daily or for practice, from 2,011 common answers; and Hangman, with 404 coding words and the category under the word.</dd></div>
+          <div><dt><span class="chip">/games · /games &lt;name&gt;</span></dt><dd>The list of games with your bests and milestones, or straight into one, resuming a game you left. Short names work: <code>c4</code>, <code>ttt</code>, <code>mines</code>.</dd></div>
+          <div><dt><span class="chip">/games milestones · /games reset</span></dt><dd>Every game's milestones in one place, or a fresh start for one game or all of them.</dd></div>
+        </dl>
+      </div>
+    </section>
+
+    <!-- Install -->
+    <section class="install" id="install" aria-labelledby="install-title">
+      <div class="wrap install-inner">
+        <h2 id="install-title">Install in under a minute</h2>
+        <ol class="steps">
+          <li>
+            <p>In a Claude Code terminal session, type this at the prompt:</p>
+            <div class="install-inline install-big">
+              <code>/plugin install games --marketplace aseem-upadhyay/qol-mods</code>
+              <button class="copy" type="button" data-copy="/plugin install games --marketplace aseem-upadhyay/qol-mods">Copy</button>
+            </div>
+          </li>
+          <li><p>Answer <kbd>y</kbd> to add the marketplace, then pick the <strong>user</strong> scope so games loads in every session.</p></li>
+          <li><p>Type <code>/games</code>. Next time Claude settles in for a long turn, you'll know what to do.</p></li>
+        </ol>
+        <p class="reqs">Plays in the desktop app's Code tab and in a terminal; nothing else to install. The mobile app and the VS Code extension show your stats but can't draw the board yet.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="wrap footer-inner">
+      <p>games is part of <a href="../">Quality of Life Mods</a> by <a href="https://github.com/aseem-upadhyay">Aseem Upadhyay</a> · <a href="https://github.com/aseem-upadhyay/qol-mods/blob/main/LICENSE">MIT license</a> · <a href="https://github.com/aseem-upadhyay/qol-mods/releases?q=games&amp;expanded=true">Changelog</a></p>
+      <p class="muted">Not affiliated with Anthropic. Claude and Claude Code are trademarks of Anthropic. Wordle, Tetris and the other game names belong to their owners; these are fan-made versions.</p>
+    </div>
+  </footer>
+
+  <script src="../site.js"></script>
+</body>
+</html>

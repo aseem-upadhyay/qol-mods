@@ -481,7 +481,7 @@ kbd {
 /* The mods, on the home page */
 .mod-cards {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 24px;
   margin-top: 44px;
 }
@@ -517,6 +517,11 @@ kbd {
   height: 100%;
   object-fit: cover;
   object-position: top center;
+}
+
+/* A preview whose subject is on its right, such as games' pane */
+.mod-card-shot .fit-right {
+  object-position: right top;
 }
 
 /* A wide preview shows whole rather than cropped */
@@ -604,6 +609,14 @@ kbd {
 /* A tall preview, such as coach's report */
 .shot-tall {
   max-width: 720px;
+}
+
+/* A small preview in a wide frame, such as games' terminal, keeps its own size */
+.shot-frame .shot-narrow:not([hidden]) {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  margin: 0 auto;
 }
 
 /* Section intros */
@@ -784,12 +797,6 @@ kbd {
 /* Responsive */
 @media (max-width: 900px) {
   .cards {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 1000px) {
-  .mod-cards {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
