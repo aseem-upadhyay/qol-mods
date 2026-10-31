@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Claude Code Mods · Quality of Life Mods</title>
-  <meta name="description" content="Free, open-source Claude Code mods. worklog writes your standup and timesheet, coach picks one habit a week, repo-spend shows what each repo costs.">
+  <meta name="description" content="Free, open-source Claude Code mods. games puts Tetris, Wordle and more beside Claude, worklog writes your standup, coach picks a habit, repo-spend tracks cost.">
   <meta name="author" content="Aseem Upadhyay">
   <meta name="robots" content="index, follow, max-image-preview:large">
   <meta property="og:title" content="Claude Code Mods · Quality of Life Mods">
@@ -17,12 +17,12 @@
   <meta property="og:image:type" content="image/png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="627">
-  <meta property="og:image:alt" content="Quality of Life Mods: mods that make Claude Code even better. Cards for worklog, your day across every repo ready for standup, which is new; coach, one habit a week; and repo-spend, what every repo costs.">
+  <meta property="og:image:alt" content="Quality of Life Mods: mods that make Claude Code even better. Cards for games, a quick game while Claude works, which is new; worklog, your standup across every repo; coach, one habit a week; and repo-spend, what every repo costs, live.">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Claude Code Mods · Quality of Life Mods">
   <meta name="twitter:description" content="Free, open-source quality of life mods that make Claude Code even better. Install with one command; nothing leaves your machine.">
   <meta name="twitter:image" content="https://qolmods.dev/assets/og.png">
-  <meta name="twitter:image:alt" content="Quality of Life Mods: mods that make Claude Code even better. Cards for worklog, your day across every repo ready for standup, which is new; coach, one habit a week; and repo-spend, what every repo costs.">
+  <meta name="twitter:image:alt" content="Quality of Life Mods: mods that make Claude Code even better. Cards for games, a quick game while Claude works, which is new; worklog, your standup across every repo; coach, one habit a week; and repo-spend, what every repo costs, live.">
   <link rel="canonical" href="https://qolmods.dev/">
   <meta name="theme-color" content="#D97757">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
@@ -53,18 +53,24 @@
           {
             "@type": "ListItem",
             "position": 1,
+            "name": "games",
+            "url": "https://qolmods.dev/games/"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
             "name": "worklog",
             "url": "https://qolmods.dev/worklog/"
           },
           {
             "@type": "ListItem",
-            "position": 2,
+            "position": 3,
             "name": "coach",
             "url": "https://qolmods.dev/coach/"
           },
           {
             "@type": "ListItem",
-            "position": 3,
+            "position": 4,
             "name": "repo-spend",
             "url": "https://qolmods.dev/repo-spend/"
           }
@@ -76,7 +82,7 @@
           {
             "@type": "Question",
             "name": "What are Claude Code mods?",
-            "acceptedAnswer": { "@type": "Answer", "text": "Mods are plugins that change how Claude Code looks or behaves: a pane beside the chat, a bar above the prompt, a new slash command, a hook on tool calls. The quality of life mods here each add something Claude Code doesn't show you on its own, like your standup, a repo's running cost or the habit to work on next." }
+            "acceptedAnswer": { "@type": "Answer", "text": "Mods are plugins that change how Claude Code looks or behaves: a pane beside the chat, a bar above the prompt, a new slash command, a hook on tool calls. The quality of life mods here each add something Claude Code doesn't have on its own, like your standup, a repo's running cost, the habit to work on next, or a quick game while Claude works." }
           },
           {
             "@type": "Question",
@@ -86,7 +92,7 @@
           {
             "@type": "Question",
             "name": "Does anything leave my machine?",
-            "acceptedAnswer": { "@type": "Answer", "text": "No. The mods read the session logs Claude Code already keeps and make no network calls of their own. The only exceptions are opt-in: coach can grade your prompts with a model, and worklog can read your pull requests through your gh login." }
+            "acceptedAnswer": { "@type": "Answer", "text": "No. The mods read the session logs Claude Code already keeps and make no network calls of their own; games keeps only your scores. The only exceptions are opt-in: coach can grade your prompts with a model, and worklog can read your pull requests through your gh login." }
           },
           {
             "@type": "Question",
@@ -101,7 +107,7 @@
           {
             "@type": "Question",
             "name": "What do I need to run them?",
-            "acceptedAnswer": { "@type": "Answer", "text": "macOS or Linux, and python3 3.9 or newer. Windows isn't supported yet." }
+            "acceptedAnswer": { "@type": "Answer", "text": "macOS or Linux. worklog, coach and repo-spend also need python3 3.9 or newer; games needs nothing beyond Claude Code. Windows isn't supported yet." }
           }
         ]
       }
@@ -127,10 +133,10 @@
     <!-- Hero -->
     <section class="hero">
       <div class="wrap">
-        <a class="release" href="worklog/"><span class="release-tag">New</span> worklog: your standup and timesheet, from your own sessions <span aria-hidden="true">→</span></a>
+        <a class="release" href="games/"><span class="release-tag">New</span> games: Tetris, Wordle and more while Claude works <span aria-hidden="true">→</span></a>
         <p class="eyebrow">Free Claude Code mods</p>
         <h1>Quality of life mods<br><span class="accent">for Claude Code.</span></h1>
-        <p class="lede">Each one adds something Claude Code doesn't show you on its own: what you did yesterday, what a repo really costs, which habit to work on next. They install with one command and run on your machine.</p>
+        <p class="lede">Each one adds something Claude Code doesn't have on its own: what you did yesterday, what a repo really costs, which habit to work on next, and a quick game while Claude works. They install with one command and run on your machine.</p>
         <div class="hero-cta">
           <a class="btn btn-primary" href="#mods">See the mods</a>
           <a class="btn btn-ghost" href="https://github.com/aseem-upadhyay/qol-mods">View on GitHub</a>
@@ -149,6 +155,21 @@
         <h2 id="mods-title">The mods</h2>
         <p class="section-lede">Pick the ones you want. Each is its own plugin, so they work alone or side by side.</p>
         <div class="mod-cards">
+          <a class="mod-card" href="games/">
+            <div class="mod-card-shot">
+              <img class="fit-right" src="assets/games/preview-desktop.svg" width="941" height="518" loading="lazy" alt="The games pane docked beside a Claude conversation in the desktop app: a Tetris game under way while Claude runs the tests.">
+            </div>
+            <div class="mod-card-body">
+              <div class="mod-card-head">
+                <span class="mod-card-name">games</span>
+                <span class="badge">New</span>
+                <span class="badge badge-quiet">v0.3.0</span>
+              </div>
+              <h3>Claude's working. Play a quick game.</h3>
+              <p>Thirteen games you already know in a side pane: Tetris, Snake, Wordle, 2048, Minesweeper and more, with milestones and your progress saved. <code>/games</code> to start.</p>
+              <span class="mod-card-more">Meet games <span aria-hidden="true">→</span></span>
+            </div>
+          </a>
           <a class="mod-card" href="worklog/">
             <div class="mod-card-shot">
               <img src="assets/worklog/preview-desktop.svg" width="780" height="1109" loading="lazy" alt="The worklog pane in the Claude desktop app: Thursday, 6h 19m across three repos, each branch on a timeline of the day.">
@@ -156,7 +177,6 @@
             <div class="mod-card-body">
               <div class="mod-card-head">
                 <span class="mod-card-name">worklog</span>
-                <span class="badge">New</span>
                 <span class="badge badge-quiet">v0.3.1</span>
               </div>
               <h3>What did I do yesterday? Ready for standup.</h3>
@@ -211,7 +231,7 @@
           <li><p>Answer <kbd>y</kbd> to add the marketplace (only the first time), then pick the <strong>user</strong> scope so the mod loads in every session.</p></li>
           <li><p>That's it. Installing from a terminal also loads the mod in the desktop app's Code tab. Each mod's page has its exact command.</p></li>
         </ol>
-        <p class="reqs">The mods need macOS or Linux and <code>python3</code> 3.9 or newer. Windows isn't supported yet.</p>
+        <p class="reqs">The mods need macOS or Linux, and all but games need <code>python3</code> 3.9 or newer. Windows isn't supported yet.</p>
       </div>
     </section>
 
@@ -222,7 +242,7 @@
         <div class="faq-list">
           <details>
             <summary>What are Claude Code mods?</summary>
-            <p>Mods are plugins that change how Claude Code looks or behaves: a pane beside the chat, a bar above the prompt, a new slash command, a hook on tool calls. The quality of life mods here each add something Claude Code doesn't show you on its own, like your standup, a repo's running cost or the habit to work on next.</p>
+            <p>Mods are plugins that change how Claude Code looks or behaves: a pane beside the chat, a bar above the prompt, a new slash command, a hook on tool calls. The quality of life mods here each add something Claude Code doesn't have on its own, like your standup, a repo's running cost, the habit to work on next, or a quick game while Claude works.</p>
           </details>
           <details>
             <summary>Are they free?</summary>
@@ -230,7 +250,7 @@
           </details>
           <details>
             <summary>Does anything leave my machine?</summary>
-            <p>No. The mods read the session logs Claude Code already keeps and make no network calls of their own. The only exceptions are opt-in: coach can grade your prompts with a model, and worklog can read your pull requests through your <code>gh</code> login.</p>
+            <p>No. The mods read the session logs Claude Code already keeps and make no network calls of their own; games keeps only your scores. The only exceptions are opt-in: coach can grade your prompts with a model, and worklog can read your pull requests through your <code>gh</code> login.</p>
           </details>
           <details>
             <summary>Do they work in the Claude desktop app?</summary>
@@ -242,7 +262,7 @@
           </details>
           <details>
             <summary>What do I need to run them?</summary>
-            <p>macOS or Linux, and <code>python3</code> 3.9 or newer. Windows isn't supported yet.</p>
+            <p>macOS or Linux. worklog, coach and repo-spend also need <code>python3</code> 3.9 or newer; games needs nothing beyond Claude Code. Windows isn't supported yet.</p>
           </details>
         </div>
       </div>

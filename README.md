@@ -17,11 +17,26 @@ Each one adds something the built-in experience doesn't give you.
 
 | Mod | What it does | |
 | --- | --- | --- |
-| **[worklog](plugins/worklog)** <sup>new</sup> | What you did, day by day, across every repo, by PR and branch with the time spent: `/standup` for the meeting, `/worklog` for any day or a week's timesheet | [Website](https://qolmods.dev/worklog/) |
+| **[games](plugins/games)** <sup>new</sup> | A quick game while Claude works: `/games` opens Tetris, Snake, Wordle, 2048 and nine more in a side pane, with milestones and your progress saved | [Website](https://qolmods.dev/games/) |
+| **[worklog](plugins/worklog)** | What you did, day by day, across every repo, by PR and branch with the time spent: `/standup` for the meeting, `/worklog` for any day or a week's timesheet | [Website](https://qolmods.dev/worklog/) |
 | **[coach](plugins/coach)** | A weekly coach built from your own sessions: one habit at a time, tips at your level, CLAUDE.md lines and skills worth making | [Website](https://qolmods.dev/coach/) |
 | **[repo-spend](plugins/repo-spend)** | A live bar above the prompt with what the repo has cost you: running total, today, the last 7 days, and this session's burn rate | [Website](https://qolmods.dev/repo-spend/) |
 
 More are on the way. Each mod's README has the full details.
+
+### [games](plugins/games)
+
+Claude's working. Play a quick game. `/games` opens a pane beside the conversation with thirteen games you already know: Snake, Tetris, Breakout, Dino Run and Pong; 2048, Minesweeper, Lights Out and Memory; Connect Four and Tic-tac-toe against a bot; Wordle and Hangman. There are 83 milestones to chase, your bests and half-finished games are saved between sessions, and an arcade game pauses itself when you type in the prompt or Claude finishes a turn. Nothing leaves your machine, and no game calls a model.
+
+<img src="plugins/games/assets/preview-desktop.svg" alt="The Claude desktop app. On the left Claude is at work: it read and edited the upload client and is running the tests. Docked on the right, the games pane shows a Tetris game: a T piece falling over its ghost toward a stack with a gap, the next and held pieces beside the well, level 2, 18 lines, a score of 4,804 against a best of 12,400, and the controls on one line below." width="100%">
+<p><sub>In the Claude desktop app, while Claude works</sub></p>
+
+<img src="plugins/games/assets/preview-games.svg" alt="Six of the games as the pane draws them. Tetris: a stack with a gap and a T piece above its ghost. 2048: a 2048 tile made, scoring 23,640. Wordle: today's puzzle, ARISE and CRAMP tried, A and R yellow then C, R and A green, CRA typed on the third row, the keyboard colored below. Snake: fifteen long, food ahead. Minesweeper: an easy board half open, numbers in color, two flags placed, 41 seconds in. Connect Four: red has four on a diagonal against the Normal bot, and the line under the board says You win! with r: again and h: hub." width="100%">
+<p><sub>Six of the thirteen, as the pane draws them</sub></p>
+
+```
+/plugin install games --marketplace aseem-upadhyay/qol-mods
+```
 
 ### [worklog](plugins/worklog)
 

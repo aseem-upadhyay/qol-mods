@@ -8,6 +8,7 @@ Thirteen games you already know in a side pane, with milestones to chase and you
 
 [![Claude Code plugin](https://img.shields.io/badge/Claude%20Code-plugin-D97757?style=flat-square)](#install)
 [![License: MIT](https://img.shields.io/badge/license-MIT-2ea44f?style=flat-square)](../../LICENSE)
+[![Website](https://img.shields.io/badge/website-qolmods.dev%2Fgames-D97757?style=flat-square)](https://qolmods.dev/games/)
 
 </div>
 
