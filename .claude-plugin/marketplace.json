@@ -27,6 +27,11 @@
       "name": "worklog",
       "source": "./plugins/worklog",
       "description": "What you worked on, day by day, across every repo: /standup for the last work day, /worklog for any day, by PR and branch with the time spent"
+    },
+    {
+      "name": "worktrees",
+      "source": "./plugins/worktrees",
+      "description": "Every git worktree of the repo in a pane: /worktree shows how stale each is, its size on disk, which ones a Claude session is using, and removes the ones you're done with"
     }
   ]
 }

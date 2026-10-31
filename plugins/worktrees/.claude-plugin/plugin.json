@@ -1,0 +1,19 @@
+{
+  "name": "worktrees",
+  "version": "0.1.0",
+  "description": "Every git worktree of the repo in a pane: how stale each is, how much disk it takes, which ones a Claude session is using, and a button to remove the ones you're done with",
+  "author": { "name": "Aseem Upadhyay", "url": "https://github.com/aseem-upadhyay" },
+  "homepage": "https://github.com/aseem-upadhyay/qol-mods/tree/main/plugins/worktrees",
+  "repository": "https://github.com/aseem-upadhyay/qol-mods",
+  "license": "MIT",
+  "keywords": ["git", "worktree", "disk", "cleanup"],
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "staleAfterDays": {
+      "type": "number",
+      "title": "Stale after (days)",
+      "description": "A worktree with no commit, edit or Claude session for this long is marked stale",
+      "default": 14
+    }
+  }
+}
